@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>线性回归学习工具</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- 移除Vite开发服务器依赖 -->
     <style>
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
@@ -195,8 +196,9 @@
                         
                         <div class="input-group" style="margin-bottom: 15px;">
                             <label>预测新同学：</label>
-                            <input type="number" id="studyHours" min="0" max="10" step="0.5" value="3.5" style="margin: 5px 0;">
+                            <input type="number" id="studyHours" min="0" max="10" step="0.5" value="3.5" style="margin: 5px 0;" placeholder="输入学习时间(小时)">
                             <button onclick="makePrediction()" style="margin: 5px 0;">预测分数</button>
+<div id="predictionResult" class="prediction-result" style="margin: 10px 0;"></div>
                         </div>
                         
                         <button onclick="calculateBestFitLine()" style="margin: 5px 0; background: #28a745; font-weight: bold;">🔍 计算最佳拟合线</button>
@@ -326,30 +328,45 @@
         }
         
         function toggleDataPoints() {
+            if (!domElements.showDataBtn) {
+                console.error('DOM元素未初始化');
+                return;
+            }
+            
             if (!dataPointsVisible) {
                 // 显示数据点
                 chart.data.datasets[0].data = studyData.map(d => ({x: d.hours, y: d.score}));
-                document.getElementById('showDataBtn').innerHTML = '🙈 隐藏数据点';
-                document.getElementById('showDataBtn').style.background = '#6c757d';
+                domElements.showDataBtn.innerHTML = '🙈 隐藏数据点';
+                domElements.showDataBtn.style.background = '#6c757d';
                 dataPointsVisible = true;
             } else {
                 // 隐藏数据点
                 chart.data.datasets[0].data = [];
-                document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
-                document.getElementById('showDataBtn').style.background = '#dc3545';
+                domElements.showDataBtn.innerHTML = '👁️ 显示数据点';
+                domElements.showDataBtn.style.background = '#dc3545';
                 dataPointsVisible = false;
             }
             chart.update();
         }
 
         function calculateRegression() {
+            // 这个函数只进行数学计算，不涉及DOM操作
             const n = studyData.length;
+            if (n < 2) {
+                return {k: 0, b: 0};
+            }
+            
             const sumX = studyData.reduce((sum, d) => sum + d.hours, 0);
             const sumY = studyData.reduce((sum, d) => sum + d.score, 0);
             const sumXY = studyData.reduce((sum, d) => sum + d.hours * d.score, 0);
             const sumX2 = studyData.reduce((sum, d) => sum + d.hours * d.hours, 0);
             
-            const k = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const denominator = n * sumX2 - sumX * sumX;
+            if (denominator === 0) {
+                return {k: 0, b: 0};
+            }
+            
+            const k = (n * sumXY - sumX * sumY) / denominator;
             const b = (sumY - k * sumX) / n;
             
             return {k, b};
@@ -358,6 +375,11 @@
         let regressionLineVisible = false;
         
         function calculateBestFitLine() {
+            if (!domElements.formulaDisplay || !domElements.errorDetails || !domElements.totalError) {
+                console.error('DOM元素未初始化');
+                return;
+            }
+            
             if (!dataPointsVisible) {
                 alert('请先点击"显示数据点"按钮，让数据出现在坐标系中！');
                 return;
@@ -369,7 +391,7 @@
             }
             
             // 显示计算过程
-            document.getElementById('formulaDisplay').innerHTML = 
+            domElements.formulaDisplay.innerHTML = 
                 `🧮 正在用最小二乘法计算最佳拟合线...`;
             
             // 计算最佳拟合线
@@ -410,6 +432,11 @@
         }
         
         function showFinalLine(k, b) {
+            if (!domElements.formulaDisplay || !domElements.errorDetails || !domElements.totalError) {
+                console.error('DOM元素未初始化');
+                return;
+            }
+            
             // 显示最终的最佳拟合线
             const lineData = [];
             for (let x = 0; x <= 10; x += 0.1) {
@@ -421,7 +448,7 @@
             
             // 计算平方差
             let totalSquaredError = 0;
-            let errorDetails = [];
+            let errorDetailsText = [];
             
             studyData.forEach((point, index) => {
                 const predictedY = k * point.hours + b;
@@ -429,19 +456,18 @@
                 const squaredError = error * error;
                 totalSquaredError += squaredError;
                 
-                errorDetails.push(
+                errorDetailsText.push(
                     `同学${index + 1}: 实际${point.score}分, 预测${predictedY.toFixed(1)}分, 误差平方=${squaredError.toFixed(2)}`
                 );
             });
             
             // 显示公式和解释
-            document.getElementById('formulaDisplay').innerHTML = 
+            domElements.formulaDisplay.innerHTML = 
                 `📊 最小二乘法结果：<br>分数 = ${k.toFixed(2)} × 学习时间 + ${b.toFixed(2)}<br><br>🎯 这条直线让所有点到直线的距离平方和最小！`;
             
             // 显示平方差计算详情
-            document.getElementById('errorDetails').innerHTML = 
-                errorDetails.join('<br>');
-            document.getElementById('totalError').innerHTML = 
+            domElements.errorDetails.innerHTML = errorDetailsText.join('<br>');
+            domElements.totalError.innerHTML = 
                 `📈 总平方误差 = ${totalSquaredError.toFixed(2)}（这是所有可能直线中最小的！）`;
             
             regressionLineVisible = true;
@@ -456,16 +482,31 @@
         }
 
         function makePrediction() {
+            if (!domElements.studyHours || !domElements.predictionResult) {
+                console.error('DOM元素未初始化');
+                return;
+            }
+            
+            if (!chart) {
+                console.error('图表未初始化');
+                return;
+            }
+            
             if (!regressionLineVisible) {
                 alert('请先点击"计算最佳拟合线"按钮，建立线性回归模型后再进行预测！');
                 return;
             }
             
-            const hours = parseFloat(document.getElementById('studyHours').value);
+            const hours = parseFloat(domElements.studyHours.value);
+            if (isNaN(hours) || hours < 0 || hours > 10) {
+                alert('请输入有效的学习时间（0-10小时之间）！');
+                return;
+            }
+            
             const {k, b} = calculateRegression();
             const predictedScore = k * hours + b;
             
-            document.getElementById('predictionResult').innerHTML = 
+            domElements.predictionResult.innerHTML = 
                 `🎯 预测结果：学习${hours}小时，考试分数大约是${predictedScore.toFixed(1)}分`;
             
             // 在图表上显示预测点
@@ -479,17 +520,24 @@
             };
             
             // 移除之前的预测点
-            if (chart.data.datasets.length > 3) {
+            if (chart.data.datasets && chart.data.datasets.length > 3) {
                 chart.data.datasets.pop();
             }
             
-            chart.data.datasets.push(predictionDataset);
-            chart.update();
+            if (chart.data.datasets) {
+                chart.data.datasets.push(predictionDataset);
+                chart.update();
+            }
         }
 
         function addData() {
-            const hours = parseFloat(document.getElementById('newHours').value);
-            const score = parseFloat(document.getElementById('newScore').value);
+            if (!domElements.newHours || !domElements.newScore || !domElements.dataTable || !domElements.formulaDisplay) {
+                console.error('DOM元素未初始化');
+                return;
+            }
+            
+            const hours = parseFloat(domElements.newHours.value);
+            const score = parseFloat(domElements.newScore.value);
             
             if (isNaN(hours) || isNaN(score)) {
                 alert('请输入有效的数字！');
@@ -499,8 +547,7 @@
             studyData.push({hours, score, name: '新同学'});
             
             // 更新表格
-            const tbody = document.getElementById('dataTable');
-            const row = tbody.insertRow();
+            const row = domElements.dataTable.insertRow();
             row.innerHTML = `<td>新同学</td><td>${hours}</td><td>${score}</td>`;
             
             // 更新图表 - 如果数据点已显示则更新，否则保持隐藏
@@ -515,66 +562,81 @@
             }
             regressionLineVisible = false;
             
-            document.getElementById('formulaDisplay').innerHTML = 
+            domElements.formulaDisplay.innerHTML = 
                 `📊 已添加新数据！点击"显示数据点"查看更新后的数据，再点击"计算最佳拟合线"重新计算`;
-            document.getElementById('predictionResult').innerHTML = 
-                `点击"预测分数"查看结果`;
+            if (domElements.predictionResult) {
+                domElements.predictionResult.innerHTML = `点击"预测分数"查看结果`;
+            }
             
             // 清除平方差记录
-            document.getElementById('errorDetails').innerHTML = '点击"计算最佳拟合线"查看计算过程';
-            document.getElementById('totalError').innerHTML = '';
+            if (domElements.errorDetails) domElements.errorDetails.innerHTML = '点击"计算最佳拟合线"查看计算过程';
+            if (domElements.totalError) domElements.totalError.innerHTML = '';
             
             chart.update();
             
             // 清空输入框
-            document.getElementById('newHours').value = '';
-            document.getElementById('newScore').value = '';
+            domElements.newHours.value = '';
+            domElements.newScore.value = '';
         }
 
         function resetData() {
-            studyData = [
-                {hours: 1, score: 60, name: '小明'},
-                {hours: 2, score: 65, name: '小红'},
-                {hours: 3, score: 75, name: '小刚'},
-                {hours: 4, score: 80, name: '小丽'},
-                {hours: 5, score: 85, name: '小强'},
-                {hours: 6, score: 90, name: '小美'}
-            ];
-            
-            // 更新表格
-            const tbody = document.getElementById('dataTable');
-            tbody.innerHTML = '';
-            studyData.forEach(d => {
-                const row = tbody.insertRow();
-                row.innerHTML = `<td>${d.name}</td><td>${d.hours}</td><td>${d.score}</td>`;
-            });
-            
-            // 清除数据点和回归线
-            chart.data.datasets[0].data = [];
-            chart.data.datasets[1].data = [];
-            while (chart.data.datasets.length > 2) {
-                chart.data.datasets.pop();
+            if (!domElements.dataTable || !domElements.formulaDisplay) {
+                console.error('DOM元素未初始化');
+                return;
             }
-            regressionLineVisible = false;
-            dataPointsVisible = false;
             
-            // 重置按钮状态
-            document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
-            document.getElementById('showDataBtn').style.background = '#dc3545';
-            
-            document.getElementById('formulaDisplay').innerHTML = 
-                `📊 数据已重置！点击"显示数据点"查看数据，再点击"计算最佳拟合线"开始计算`;
-            document.getElementById('predictionResult').innerHTML = 
-                `点击"预测分数"查看结果`;
-            
-            // 清除平方差记录
-            document.getElementById('errorDetails').innerHTML = '点击"计算最佳拟合线"查看计算过程';
-            document.getElementById('totalError').innerHTML = '';
-            
-            chart.update();
+            if (confirm('确定要重置所有数据吗？')) {
+                studyData = [
+                    {hours: 1, score: 60, name: '小明'},
+                    {hours: 2, score: 65, name: '小红'},
+                    {hours: 3, score: 75, name: '小刚'},
+                    {hours: 4, score: 80, name: '小丽'},
+                    {hours: 5, score: 85, name: '小强'},
+                    {hours: 6, score: 90, name: '小美'}
+                ];
+                
+                // 更新表格
+                domElements.dataTable.innerHTML = '';
+                studyData.forEach(d => {
+                    const row = domElements.dataTable.insertRow();
+                    row.innerHTML = `<td>${d.name}</td><td>${d.hours}</td><td>${d.score}</td>`;
+                });
+                
+                // 清除数据点和回归线
+                chart.data.datasets[0].data = [];
+                chart.data.datasets[1].data = [];
+                while (chart.data.datasets.length > 2) {
+                    chart.data.datasets.pop();
+                }
+                regressionLineVisible = false;
+                dataPointsVisible = false;
+                
+                // 重置按钮状态
+                if (domElements.showDataBtn) {
+                    domElements.showDataBtn.innerHTML = '👁️ 显示数据点';
+                    domElements.showDataBtn.style.background = '#dc3545';
+                }
+                
+                domElements.formulaDisplay.innerHTML = 
+                    `📊 数据已重置！点击"显示数据点"查看数据，再点击"计算最佳拟合线"开始计算`;
+                if (domElements.predictionResult) {
+                    domElements.predictionResult.innerHTML = 
+                        `点击"预测分数"查看结果`;
+                }
+                
+                if (domElements.errorDetails) domElements.errorDetails.innerHTML = '点击"计算最佳拟合线"查看计算过程';
+                if (domElements.totalError) domElements.totalError.innerHTML = '';
+                
+                chart.update();
+            }
         }
 
         function generateRandomData() {
+            if (!domElements.dataTable || !domElements.formulaDisplay) {
+                console.error('DOM元素未初始化');
+                return;
+            }
+            
             studyData = [];
             for (let i = 1; i <= 8; i++) {
                 const hours = Math.random() * 8 + 1;
@@ -587,10 +649,9 @@
             }
             
             // 更新表格
-            const tbody = document.getElementById('dataTable');
-            tbody.innerHTML = '';
+            domElements.dataTable.innerHTML = '';
             studyData.forEach(d => {
-                const row = tbody.insertRow();
+                const row = domElements.dataTable.insertRow();
                 row.innerHTML = `<td>${d.name}</td><td>${d.hours}</td><td>${d.score}</td>`;
             });
             
@@ -604,23 +665,50 @@
             dataPointsVisible = false;
             
             // 重置按钮状态
-            document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
-            document.getElementById('showDataBtn').style.background = '#dc3545';
+            if (domElements.showDataBtn) {
+                domElements.showDataBtn.innerHTML = '👁️ 显示数据点';
+                domElements.showDataBtn.style.background = '#dc3545';
+            }
             
-            document.getElementById('formulaDisplay').innerHTML = 
+            domElements.formulaDisplay.innerHTML = 
                 `📊 已生成随机数据！点击"显示数据点"查看数据，再点击"计算最佳拟合线"开始计算`;
-            document.getElementById('predictionResult').innerHTML = 
-                `点击"预测分数"查看结果`;
-            
-            // 清除平方差记录
-            document.getElementById('errorDetails').innerHTML = '点击"计算最佳拟合线"查看计算过程';
-            document.getElementById('totalError').innerHTML = '';
+            if (domElements.predictionResult) {
+                domElements.predictionResult.innerHTML = `点击"预测分数"查看结果`;
+            }
+            if (domElements.errorDetails) domElements.errorDetails.innerHTML = '点击"计算最佳拟合线"查看计算过程';
+            if (domElements.totalError) domElements.totalError.innerHTML = '';
             
             chart.update();
         }
 
+        // 全局DOM元素缓存
+        let domElements = {};
+        
         // 初始化
         window.onload = function() {
+            // 缓存所有DOM元素引用
+            domElements = {
+                studyHours: document.getElementById('studyHours'),
+                predictionResult: document.getElementById('predictionResult'),
+                newHours: document.getElementById('newHours'),
+                newScore: document.getElementById('newScore'),
+                dataTable: document.getElementById('dataTable'),
+                formulaDisplay: document.getElementById('formulaDisplay'),
+                errorDetails: document.getElementById('errorDetails'),
+                totalError: document.getElementById('totalError'),
+                showDataBtn: document.getElementById('showDataBtn')
+            };
+            
+            // 检查所有必要的DOM元素是否存在
+            const requiredElements = ['studyHours', 'predictionResult', 'newHours', 'newScore', 'dataTable', 'formulaDisplay', 'errorDetails', 'totalError'];
+            const missingElements = requiredElements.filter(id => !domElements[id]);
+            
+            if (missingElements.length > 0) {
+                console.error('以下DOM元素未找到:', missingElements);
+                alert('页面加载出错，请刷新页面重试！');
+                return;
+            }
+            
             initChart();
         };
     </script>
