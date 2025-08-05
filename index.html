@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器学习算法导览 - 回归·分类·聚类</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="nav-bar">
+            <ul class="nav-links">
+                <li><a href="index-modern.html">🏠 首页</a></li>
+                <li><a href="#regression">📈 回归</a></li>
+                <li><a href="#classification">🎯 分类</a></li>
+                <li><a href="#clustering">🌀 聚类</a></li>
+            </ul>
+        </nav>
+
+        <div class="header">
+            <h1>🤖 机器学习算法导览</h1>
+            <p>探索回归、分类、聚类三大核心算法的奥秘</p>
+        </div>
+
+        <div class="algorithm-grid">
+            <!-- 回归算法 -->
+            <div class="algorithm-section" id="regression">
+                <h2 class="section-title regression-title">📈 回归算法</h2>
+                <p style="text-align: center; margin-bottom: 20px; color: #666;">
+                    预测连续值，寻找变量间的数学关系
+                </p>
+                
+                <ul class="algorithm-list">
+                    <li class="algorithm-item">
+                        <a href="pages/linear-regression.html">
+                            <div class="algorithm-name">简单线性回归</div>
+                            <div class="algorithm-desc">最基础的回归模型，探索两个变量的线性关系</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item">
+                        <a href="pages/multiple-regression.html">
+                            <div class="algorithm-name">多元线性回归</div>
+                            <div class="algorithm-desc">处理多个特征与目标变量的线性关系</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item">
+                        <a href="pages/polynomial-regression.html">
+                            <div class="algorithm-name">多项式回归</div>
+                            <div class="algorithm-desc">捕捉变量间的非线性关系，用曲线拟合数据</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item">
+                        <a href="pages/decision-tree-regression.html">
+                            <div class="algorithm-name">决策树回归</div>
+                            <div class="algorithm-desc">用树形结构进行分段预测，处理复杂的非线性关系</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item">
+                        <a href="pages/random-forest-regression.html">
+                            <div class="algorithm-name">随机森林回归</div>
+                            <div class="algorithm-desc">集成多个决策树，提高预测准确性和稳定性</div>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 分类算法 -->
+            <div class="algorithm-section" id="classification">
+                <h2 class="section-title classification-title">🎯 分类算法</h2>
+                <p style="text-align: center; margin-bottom: 20px; color: #666;">
+                    预测离散标签，将数据分到不同类别
+                </p>
+                
+                <div class="feature-icons">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-icon">📊</div>
+                </div>
+                
+                <ul class="algorithm-list">
+                    <li class="algorithm-item">
+                        <a href="pages/logistic-regression.html">
+                            <div class="algorithm-name">逻辑回归</div>
+                            <div class="algorithm-desc">二分类问题的经典算法，用S型曲线预测通过概率</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item">
+                        <a href="pages/decision-tree-classification.html">
+                            <div class="algorithm-name">决策树分类</div>
+                            <div class="algorithm-desc">用树形结构做"如果...那么..."的判断，水果分类案例演示</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item">
+                        <a href="pages/random-forest-classification.html">
+                            <div class="algorithm-name">随机森林分类</div>
+                            <div class="algorithm-desc">集成学习在分类问题上的应用</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item coming-soon">
+                        <div class="algorithm-name">支持向量机</div>
+                        <div class="algorithm-desc">寻找最优分割超平面，处理线性和非线性分类</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 聚类算法 -->
+            <div class="algorithm-section" id="clustering">
+                <h2 class="section-title clustering-title">🌀 聚类算法</h2>
+                <p style="text-align: center; margin-bottom: 20px; color: #666;">
+                    无监督学习，发现数据中的内在结构
+                </p>
+                
+                <div class="feature-icons">
+                    <div class="feature-icon">🌀</div>
+                    <div class="feature-icon">📍</div>
+                    <div class="feature-icon">🔍</div>
+                </div>
+                
+                <ul class="algorithm-list">
+                    <li class="algorithm-item">
+                        <a href="pages/kmeans-clustering.html">
+                            <div class="algorithm-name">K-Means聚类</div>
+                            <div class="algorithm-desc">把相似的数据点分到同一组，学生成绩聚类演示</div>
+                        </a>
+                    </li>
+                    
+                    <li class="algorithm-item coming-soon">
+                        <div class="algorithm-name">层次聚类</div>
+                        <div class="algorithm-desc">构建数据的层次结构，形成树状的聚类结果</div>
+                    </li>
+                    
+                    <li class="algorithm-item coming-soon">
+                        <div class="algorithm-name">DBSCAN</div>
+                        <div class="algorithm-desc">基于密度的聚类算法，能发现任意形状的簇</div>
+                    </li>
+                    
+                    <li class="algorithm-item coming-soon">
+                        <div class="algorithm-name">高斯混合模型</div>
+                        <div class="algorithm-desc">假设数据来自多个高斯分布的混合</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>💡 点击上方算法名称开始学习之旅！</p>
+            <p>当前已完成：5个回归算法教学网页 | 正在开发：分类算法系列</p>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
+            MLUtils.initPage();
+        });
+
+        // 平滑滚动到锚点
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
