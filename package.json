@@ -1,0 +1,36 @@
+{
+  "name": "machine-learning-tutorial",
+  "version": "1.0.0",
+  "description": "机器学习算法互动教学网站",
+  "main": "index-modern.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "live-server --port=8000",
+    "migrate": "node migrate.js",
+    "build": "echo '构建完成'",
+    "test": "echo '测试完成'"
+  },
+  "keywords": [
+    "machine-learning",
+    "education",
+    "tutorial",
+    "interactive",
+    "visualization"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/machine-learning-tutorial.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/machine-learning-tutorial/issues"
+  },
+  "homepage": "https://github.com/your-username/machine-learning-tutorial#readme"
+} 

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初中生多项式回归学习工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 15px 0;
+        }
+        
+        .three-container {
+            position: relative;
+            height: 600px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input, button {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .info-panel {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .formula {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .prediction-result {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #155724;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .data-table th {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .comparison-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .polynomial-curve {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 多项式回归学习工具</h1>
+            <p>理解植物生长与施肥量的非线性关系</p>
+        </div>
+        
+        <div class="section">
+            <h2>🌿 第一步：观察真实数据</h2>
+            <p>我们来看看植物生长高度与施肥量的真实关系：</p>
+            
+            <table class="data-table" style="margin: 10px 0;">
+                <thead>
+                    <tr>
+                        <th>实验组</th>
+                        <th>施肥量(g)</th>
+                        <th>植物高度(cm)</th>
+                        <th>观察现象</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <tr><td>A组</td><td>0</td><td>10</td><td>缺乏营养，生长缓慢</td></tr>
+                    <tr><td>B组</td><td>2</td><td>25</td><td>适量施肥，生长良好</td></tr>
+                    <tr><td>C组</td><td>5</td><td>45</td><td>最佳施肥量，生长最快</td></tr>
+                    <tr><td>D组</td><td>8</td><td>35</td><td>施肥过多，生长放缓</td></tr>
+                    <tr><td>E组</td><td>12</td><td>20</td><td>严重过量，生长受阻</td></tr>
+                    <tr><td>F组</td><td>15</td><td>8</td><td>中毒现象，植株矮小</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🤔 思考：线性 vs 多项式回归</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h3>📈 线性回归</h3>
+                    <p>公式：高度 = a × 施肥 + b</p>
+                    <div class="info-panel">
+                        <strong>问题：</strong>无法描述"施肥过多反而抑制生长"的现象
+                    </div>
+                </div>
+                <div class="comparison-card">
+                    <h3>🏠 多项式回归</h3>
+                    <p>公式：高度 = a×施肥² + b×施肥 + c</p>
+                    <div class="info-panel">
+                        <strong>优势：</strong>能完美拟合先上升后下降的曲线关系
+                    </div>
+                </div>
+                <div class="comparison-card">
+                    <h3>🎯 二次多项式</h3>
+                    <p>抛物线形状</p>
+                    <div class="info-panel">
+                        <strong>特点：</strong>存在最大值点（最佳施肥量）
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📈 第二步：可视化多项式关系</h2>
+            <div style="margin-bottom: 15px;">
+                <button onclick="toggleDataPoints()" id="showDataBtn" style="background: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    👁️ 显示数据点
+                </button>
+                
+            </div>
+            <div class="chart-container">
+                <canvas id="polynomialChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🎮 第三步：动手实验</h2>
+            <div class="controls" style="flex-direction: column; align-items: stretch;">
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label>添加新实验数据：</label>
+                    <input type="number" id="newFertilizer" placeholder="施肥量(g)" min="0" max="20" step="0.5" style="margin: 5px 0;">
+                    <input type="number" id="newHeight" placeholder="植物高度(cm)" min="0" max="100" step="1" style="margin: 5px 0;">
+                    <button onclick="addData()" style="margin: 5px 0;">添加数据</button>
+                </div>
+                
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label>预测植物高度：</label>
+                    <input type="number" id="predFertilizer" placeholder="施肥量(g)" min="0" max="20" step="0.5" value="6" style="margin: 5px 0;">
+                    <button onclick="makePrediction()" style="margin: 5px 0;">预测高度</button>
+                </div>
+                
+                <button onclick="calculateBestFitCurve()" style="margin: 5px 0; background: #28a745; font-weight: bold;">🔍 计算最佳多项式曲线</button>
+                <button onclick="findOptimalFertilizer()" style="margin: 5px 0; background: #007bff;">🎯 找出最佳施肥量</button>
+                <button onclick="resetData()" style="margin: 5px 0;">重置数据</button>
+                <button onclick="generateRandomData()" style="margin: 5px 0;">生成随机数据</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 多项式回归分析</h2>
+            <div class="polynomial-curve">
+                <p><strong>二次多项式公式：</strong>高度 = a×施肥² + b×施肥 + c</p>
+                <div id="formulaDisplay">点击"计算最佳多项式曲线"查看拟合结果</div>
+            </div>
+            <div id="curveAnalysis" class="polynomial-curve">
+                <p><strong>曲线特征分析：</strong></p>
+                <div id="curveDetails">计算完成后，这里会显示曲线的数学特征</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔢 计算结果</h2>
+            <div class="prediction-result" id="predictionResult">
+                请输入施肥量进行预测
+            </div>
+            <div class="info-panel" id="optimalResult">
+                <strong>最佳施肥量：</strong>计算完成后显示能获得最大植物高度的施肥量
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🤖 与人工智能的关系</h2>
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; border-left: 5px solid #4CAF50;">
+                <h3>🧠 AI如何用多项式回归？</h3>
+                <p><strong>农业智能：</strong>根据土壤湿度、温度、施肥量预测作物产量</p>
+                <p><strong>经济预测：</strong>根据广告投入预测销售额（存在最佳投入点）</p>
+                <p><strong>医疗诊断：</strong>根据药物剂量预测治疗效果（存在最佳剂量）</p>
+                <p><strong>工程设计：</strong>根据材料用量预测产品性能</p>
+                
+                <h3>🎯 多项式回归的魔力</h3>
+                <p>现实世界很多关系都不是简单的直线，而是存在最优点的曲线关系。多项式回归让AI能够找到这些"甜蜜点"，帮助人类做出最优决策！</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        let plantData = [
+            {fertilizer: 0, height: 10, name: 'A组'},
+            {fertilizer: 2, height: 25, name: 'B组'},
+            {fertilizer: 5, height: 45, name: 'C组'},
+            {fertilizer: 8, height: 35, name: 'D组'},
+            {fertilizer: 12, height: 20, name: 'E组'},
+            {fertilizer: 15, height: 8, name: 'F组'}
+        ];
+        
+        let polynomialCoeffs = null;
+        let curveVisible = false;
+        
+        function initChart() {
+            const ctx = document.getElementById('polynomialChart').getContext('2d');
+            
+            chart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: '实验数据',
+                        data: [],
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }, {
+                        label: '多项式拟合曲线',
+                        data: [],
+                        type: 'line',
+                        borderColor: 'green',
+                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '施肥量 (g)',
+                                font: { size: 14 }
+                            },
+                            min: -1,
+                            max: 20,
+                            ticks: { font: { size: 12 } }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '植物高度 (cm)',
+                                font: { size: 14 }
+                            },
+                            min: 0,
+                            max: 50,
+                            ticks: { font: { size: 12 } }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '植物高度与施肥量的多项式关系',
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function toggleDataPoints() {
+            if (!chart.data.datasets[0].data.length) {
+                // 显示数据点
+                chart.data.datasets[0].data = plantData.map(d => ({x: d.fertilizer, y: d.height}));
+                document.getElementById('showDataBtn').innerHTML = '🙈 隐藏数据点';
+                document.getElementById('showDataBtn').style.background = '#6c757d';
+            } else {
+                // 隐藏数据点
+                chart.data.datasets[0].data = [];
+                chart.data.datasets[1].data = [];
+                document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
+                document.getElementById('showDataBtn').style.background = '#dc3545';
+                curveVisible = false;
+            }
+            chart.update();
+        }
+        
+        function calculatePolynomialRegression() {
+            const n = plantData.length;
+            let sumX = 0, sumX2 = 0, sumX3 = 0, sumX4 = 0;
+            let sumY = 0, sumXY = 0, sumX2Y = 0;
+            
+            plantData.forEach(d => {
+                const x = d.fertilizer;
+                const y = d.height;
+                sumX += x;
+                sumX2 += x * x;
+                sumX3 += x * x * x;
+                sumX4 += x * x * x * x;
+                sumY += y;
+                sumXY += x * y;
+                sumX2Y += x * x * y;
+            });
+            
+            // 解二次多项式方程组
+            const A = [[n, sumX, sumX2], [sumX, sumX2, sumX3], [sumX2, sumX3, sumX4]];
+            const B = [sumY, sumXY, sumX2Y];
+            
+            // 使用克莱姆法则求解
+            const det = A[0][0]*(A[1][1]*A[2][2] - A[1][2]*A[2][1]) - A[0][1]*(A[1][0]*A[2][2] - A[1][2]*A[2][0]) + A[0][2]*(A[1][0]*A[2][1] - A[1][1]*A[2][0]);
+            
+            if (Math.abs(det) < 1e-10) {
+                return {a: 0, b: 0, c: 0};
+            }
+            
+            const detA = B[0]*(A[1][1]*A[2][2] - A[1][2]*A[2][1]) - A[0][1]*(B[1]*A[2][2] - A[1][2]*B[2]) + A[0][2]*(B[1]*A[2][1] - A[1][1]*B[2]);
+            const detB = A[0][0]*(B[1]*A[2][2] - A[1][2]*B[2]) - B[0]*(A[1][0]*A[2][2] - A[1][2]*A[2][0]) + A[0][2]*(A[1][0]*B[2] - B[1]*A[2][0]);
+            const detC = A[0][0]*(A[1][1]*B[2] - B[1]*A[2][1]) - A[0][1]*(A[1][0]*B[2] - B[1]*A[2][0]) + B[0]*(A[1][0]*A[2][1] - A[1][1]*A[2][0]);
+            
+            return {
+                c: detA / det,
+                b: detB / det,
+                a: detC / det
+            };
+        }
+        
+        function calculateBestFitCurve() {
+            if (!chart.data.datasets[0].data.length) {
+                alert('请先点击"显示数据点"按钮，让数据出现在图表中！');
+                return;
+            }
+            
+            if (plantData.length < 3) {
+                alert('需要至少3个数据点才能计算二次多项式！');
+                return;
+            }
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                '🧮 正在用最小二乘法计算最佳二次多项式...';
+            
+            // 计算多项式系数
+            polynomialCoeffs = calculatePolynomialRegression();
+            
+            // 生成拟合曲线数据
+            const curveData = [];
+            for (let x = -1; x <= 20; x += 0.2) {
+                const y = polynomialCoeffs.a * x * x + polynomialCoeffs.b * x + polynomialCoeffs.c;
+                curveData.push({x: x, y: Math.max(0, y)});
+            }
+            
+            chart.data.datasets[1].data = curveData;
+            chart.update();
+            
+            // 显示公式和曲线特征
+            const vertexX = -polynomialCoeffs.b / (2 * polynomialCoeffs.a);
+            const vertexY = polynomialCoeffs.a * vertexX * vertexX + polynomialCoeffs.b * vertexX + polynomialCoeffs.c;
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                `📊 二次多项式结果：<br>高度 = ${polynomialCoeffs.a.toFixed(3)}×施肥² + ${polynomialCoeffs.b.toFixed(3)}×施肥 + ${polynomialCoeffs.c.toFixed(3)}`;
+            
+            document.getElementById('curveDetails').innerHTML = 
+                `📈 曲线特征：<br>• 开口方向：${polynomialCoeffs.a < 0 ? '向下（有最大值）' : '向上（有最小值）'}<br>• 顶点位置：施肥${vertexX.toFixed(1)}g时，高度${Math.max(0, vertexY).toFixed(1)}cm<br>• 最佳施肥量：${Math.max(0, Math.min(20, vertexX)).toFixed(1)}g`;
+            
+            curveVisible = true;
+        }
+        
+        function findOptimalFertilizer() {
+            if (!curveVisible) {
+                alert('请先计算最佳多项式曲线！');
+                return;
+            }
+            
+            const vertexX = -polynomialCoeffs.b / (2 * polynomialCoeffs.a);
+            const vertexY = polynomialCoeffs.a * vertexX * vertexX + polynomialCoeffs.b * vertexX + polynomialCoeffs.c;
+            
+            const optimalFertilizer = Math.max(0, Math.min(20, vertexX));
+            const maxHeight = Math.max(0, vertexY);
+            
+            document.getElementById('optimalResult').innerHTML = 
+                `<strong>🎯 最佳施肥量：${optimalFertilizer.toFixed(1)}g</strong><br>
+                 此时植物高度可达：${maxHeight.toFixed(1)}cm<br>
+                 超过或低于这个量都会降低生长效果！`;
+        }
+        
+        function makePrediction() {
+            if (!curveVisible) {
+                alert('请先计算最佳多项式曲线！');
+                return;
+            }
+            
+            const fertilizer = parseFloat(document.getElementById('predFertilizer').value);
+            if (isNaN(fertilizer)) {
+                alert('请输入有效的施肥量！');
+                return;
+            }
+            
+            const predictedHeight = polynomialCoeffs.a * fertilizer * fertilizer + 
+                                  polynomialCoeffs.b * fertilizer + 
+                                  polynomialCoeffs.c;
+            
+            document.getElementById('predictionResult').innerHTML = 
+                `🌱 预测结果：施肥${fertilizer}g，植物高度约为${Math.max(0, predictedHeight).toFixed(1)}cm`;
+            
+            // 在图表上显示预测点
+            const predictionDataset = {
+                label: '预测点',
+                data: [{x: fertilizer, y: Math.max(0, predictedHeight)}],
+                backgroundColor: 'purple',
+                borderColor: 'purple',
+                pointRadius: 10,
+                pointStyle: 'star'
+            };
+            
+            // 移除之前的预测点
+            if (chart.data.datasets.length > 3) {
+                chart.data.datasets.pop();
+            }
+            
+            chart.data.datasets.push(predictionDataset);
+            chart.update();
+        }
+        
+        function addData() {
+            const fertilizer = parseFloat(document.getElementById('newFertilizer').value);
+            const height = parseFloat(document.getElementById('newHeight').value);
+            
+            if (isNaN(fertilizer) || isNaN(height)) {
+                alert('请输入有效的数字！');
+                return;
+            }
+            
+            plantData.push({fertilizer, height, name: '新数据'});
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            const row = tbody.insertRow();
+            row.innerHTML = `<td>新数据</td><td>${fertilizer}</td><td>${height}</td><td>用户添加</td>`;
+            
+            // 更新图表
+            if (chart.data.datasets[0].data.length) {
+                chart.data.datasets[0].data = plantData.map(d => ({x: d.fertilizer, y: d.height}));
+            }
+            
+            // 清除现有的曲线
+            chart.data.datasets[1].data = [];
+            curveVisible = false;
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                `📊 已添加新数据！点击"计算最佳多项式曲线"重新拟合`;
+            document.getElementById('predictionResult').innerHTML = 
+                `请输入施肥量进行预测`;
+            
+            chart.update();
+        }
+        
+        function resetData() {
+            plantData = [
+                {fertilizer: 0, height: 10, name: 'A组'},
+                {fertilizer: 2, height: 25, name: 'B组'},
+                {fertilizer: 5, height: 45, name: 'C组'},
+                {fertilizer: 8, height: 35, name: 'D组'},
+                {fertilizer: 12, height: 20, name: 'E组'},
+                {fertilizer: 15, height: 8, name: 'F组'}
+            ];
+            
+            // 重置表格
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = `
+                <tr><td>A组</td><td>0</td><td>10</td><td>缺乏营养，生长缓慢</td></tr>
+                <tr><td>B组</td><td>2</td><td>25</td><td>适量施肥，生长良好</td></tr>
+                <tr><td>C组</td><td>5</td><td>45</td><td>最佳施肥量，生长最快</td></tr>
+                <tr><td>D组</td><td>8</td><td>35</td><td>施肥过多，生长放缓</td></tr>
+                <tr><td>E组</td><td>12</td><td>20</td><td>严重过量，生长受阻</td></tr>
+                <tr><td>F组</td><td>15</td><td>8</td><td>中毒现象，植株矮小</td></tr>
+            `;
+            
+            // 重置图表
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            chart.data.datasets.pop(); // 移除预测点
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                '点击"计算最佳多项式曲线"查看拟合结果';
+            document.getElementById('predictionResult').innerHTML = 
+                '请输入施肥量进行预测';
+            document.getElementById('optimalResult').innerHTML = 
+                '<strong>最佳施肥量：</strong>计算完成后显示能获得最大植物高度的施肥量';
+            
+            curveVisible = false;
+            polynomialCoeffs = null;
+            chart.update();
+        }
+        
+        function generateRandomData() {
+            plantData = [];
+            const names = ['实验组1', '实验组2', '实验组3', '实验组4', '实验组5', '实验组6'];
+            
+            for (let i = 0; i < 6; i++) {
+                const fertilizer = Math.floor(Math.random() * 18) + 1; // 1-18g
+                // 生成抛物线形状的数据
+                const height = Math.floor(-0.3 * fertilizer * fertilizer + 3 * fertilizer + 10 + (Math.random() - 0.5) * 10);
+                plantData.push({fertilizer, height: Math.max(5, height), name: names[i]});
+            }
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            plantData.forEach(data => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${data.name}</td><td>${data.fertilizer}</td><td>${data.height}</td><td>随机数据</td>`;
+            });
+            
+            // 更新图表
+            if (chart.data.datasets[0].data.length) {
+                chart.data.datasets[0].data = plantData.map(d => ({x: d.fertilizer, y: d.height}));
+            }
+            
+            // 清除现有的曲线
+            chart.data.datasets[1].data = [];
+            curveVisible = false;
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                '已生成随机数据！点击"计算最佳多项式曲线"重新拟合';
+            document.getElementById('predictionResult').innerHTML = 
+                '请输入施肥量进行预测';
+            
+            chart.update();
+        }
+        
+        // 初始化
+        window.onload = function() {
+            initChart();
+        };
+    </script>
+
+    <div class="section">
+        <h2>🎓 拓展学习：更多回归算法</h2>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff;">
+            <h3>📚 回归算法全家福</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                <div style="background: white; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h4>🎯 线性方法</h4>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                        <li><strong>岭回归：</strong>加L2正则化，防过拟合</li>
+                        <li><strong>Lasso回归：</strong>加L1正则化，能特征选择</li>
+                        <li><strong>弹性网络：</strong>L1+L2结合，高维数据好</li>
+                    </ul>
+                </div>
+                
+                <div style="background: white; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h4>🌳 树方法</h4>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                        <li><strong>决策树：</strong>像分叉树，易懂</li>
+                        <li><strong>随机森林：</strong>多棵树投票，更稳</li>
+                        <li><strong>梯度提升：</strong>树叠树，精度高</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h4>💡 一句话总结</h4>
+                <p><strong>线性回归</strong>像直尺，<strong>多项式回归</strong>像曲线尺，
+                <strong>树方法</strong>像分叉路口，<strong>正则化方法</strong>像安全网。
+                选算法就像选工具：简单问题用直尺，复杂问题用高级工具！</p>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h4>🎪 趣味记忆法</h4>
+                <p><strong>口诀：</strong>"线性像直线，多项式像抛物线，
+                岭回归加平方，Lasso加绝对值，
+                决策树像分叉，随机森林像树林，
+                梯度提升像爬楼梯，支持向量像安全带"</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

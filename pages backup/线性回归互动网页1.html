@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>线性回归学习工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 15px 0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input, button {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #764ba2;
+        }
+        
+        .info-panel {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .formula {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .prediction-result {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #155724;
+        }
+        
+        
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .data-table th {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 线性回归学习工具</h1>
+        </div>
+        
+        <div class="section">
+            <h2>📊 第一步：观察数据</h2>
+            <p>我们来看看同学们的学习时间和考试成绩：</p>
+            
+            <table class="data-table" style="margin: 10px 0;">
+                <thead>
+                    <tr>
+                        <th>学生</th>
+                        <th>学习时间（小时）</th>
+                        <th>考试分数（分）</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <tr><td>小明</td><td>1</td><td>60</td></tr>
+                    <tr><td>小红</td><td>2</td><td>65</td></tr>
+                    <tr><td>小刚</td><td>3</td><td>75</td></tr>
+                    <tr><td>小丽</td><td>4</td><td>80</td></tr>
+                    <tr><td>小强</td><td>5</td><td>85</td></tr>
+                    <tr><td>小美</td><td>6</td><td>90</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🤔 思考与探索</h2>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
+                <p><strong>时间与成绩是否有关？</strong></p>
+                <p>观察上表中的数据，思考：</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>学习时间和考试分数之间存在什么关系？</li>
+                    <li>这种关系是正相关还是负相关？</li>
+                    <li>如何科学地解释这种相关性？</li>
+                </ul>
+                <p><strong>数据可视化：</strong></p>
+                <p>将每个同学的数据绘制到一个坐标系中，横轴表示学习时间，纵轴表示考试分数。再进一步观察数据点的分布规律。</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📈 第二步：可视化数据</h2>
+            <div style="margin-bottom: 15px;">
+                <button onclick="toggleDataPoints()" id="showDataBtn" style="background: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    👁️ 显示数据点
+                </button>
+                <span style="margin-left: 10px; color: #666; font-size: 14px;">点击按钮后，红色的数据点才会出现在坐标系中</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <div style="flex: 1;">
+            
+            <div style="flex: 1.5;">
+                <div class="section">
+                    <h2>🎮 第三步：动手实验</h2>
+                    <div class="controls" style="flex-direction: column; align-items: stretch;">
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>添加新数据：</label>
+                            <input type="number" id="newHours" placeholder="学习时间(小时)" min="0" max="10" step="0.5" style="margin: 5px 0;">
+                            <input type="number" id="newScore" placeholder="考试分数(分)" min="0" max="100" step="1" style="margin: 5px 0;">
+                            <button onclick="addData()" style="margin: 5px 0;">添加数据</button>
+                        </div>
+                        
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>预测新同学：</label>
+                            <input type="number" id="studyHours" min="0" max="10" step="0.5" value="3.5" style="margin: 5px 0;">
+                            <button onclick="makePrediction()" style="margin: 5px 0;">预测分数</button>
+                        </div>
+                        
+                        <button onclick="calculateBestFitLine()" style="margin: 5px 0; background: #28a745; font-weight: bold;">🔍 计算最佳拟合线</button>
+                        <button onclick="resetData()" style="margin: 5px 0;">重置数据</button>
+                        <button onclick="generateRandomData()" style="margin: 5px 0;">生成随机数据</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 平方差计算记录</h2>
+            <div id="squaredErrors" style="background: #fff3cd; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+                <p>💡 计算最佳拟合线后，这里会显示每个数据点到直线的垂直距离平方：</p>
+                <div id="errorDetails">点击"计算最佳拟合线"查看计算过程</div>
+                <div id="totalError" style="margin-top: 10px; font-weight: bold; color: #d63384;"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔢 计算结果</h2>
+                    <div class="formula" id="formulaDisplay" style="font-size: 14px;">
+                        正在计算中...
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🤖 小结：与人工智能的关系</h2>
+            <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545;">
+                <h3>🧠 AI每天都在用线性回归！</h3>
+                <p><strong>抖音推荐：</strong>根据你点赞的视频类型，预测你可能喜欢的其他视频</p>
+                <p><strong>淘宝推荐：</strong>根据你的浏览记录，预测你可能想买的商品</p>
+                <p><strong>天气预报：</strong>根据历史天气数据，预测明天的温度</p>
+                <p><strong>导航软件：</strong>根据路况数据，预测到达目的地的时间</p>
+                
+                <h3>🎯 AI学习过程 = 我们的学习过程</h3>
+                <ol>
+                    <li>收集大量数据（就像我们今天收集学习时间和分数）</li>
+                    <li>找到数据规律（画出最佳拟合线）</li>
+                    <li>用规律做预测（预测新同学的分数）</li>
+                    <li>不断修正改进（让预测更准确）</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        let studyData = [
+            {hours: 1, score: 60, name: '小明'},
+            {hours: 2, score: 65, name: '小红'},
+            {hours: 3, score: 75, name: '小刚'},
+            {hours: 4, score: 80, name: '小丽'},
+            {hours: 5, score: 85, name: '小强'},
+            {hours: 6, score: 90, name: '小美'}
+        ];
+
+        let dataPointsVisible = false;
+        
+        function initChart() {
+            const ctx = document.getElementById('scatterChart').getContext('2d');
+            
+            chart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: '实际数据',
+                        data: [], // 初始为空，等待按钮点击
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }, {
+                        label: '最佳拟合线',
+                        data: [],
+                        type: 'line',
+                        borderColor: 'blue',
+                        backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '学习时间（小时）',
+                            font: { size: 14 }
+                        },
+                        min: 0,
+                        max: 10,
+                        ticks: { font: { size: 12 } }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '考试分数（分）',
+                            font: { size: 14 }
+                        },
+                        min: 50,
+                        max: 100,
+                        ticks: { font: { size: 12 } }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '学习时间与考试分数关系图',
+                        font: { size: 16 }
+                    },
+                    legend: {
+                        display: true,
+                        labels: { font: { size: 12 } }
+                    }
+                }
+            }
+            });
+            
+            // 初始不显示回归线，等待用户点击计算
+        }
+        
+        function toggleDataPoints() {
+            if (!dataPointsVisible) {
+                // 显示数据点
+                chart.data.datasets[0].data = studyData.map(d => ({x: d.hours, y: d.score}));
+                document.getElementById('showDataBtn').innerHTML = '🙈 隐藏数据点';
+                document.getElementById('showDataBtn').style.background = '#6c757d';
+                dataPointsVisible = true;
+            } else {
+                // 隐藏数据点
+                chart.data.datasets[0].data = [];
+                document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
+                document.getElementById('showDataBtn').style.background = '#dc3545';
+                dataPointsVisible = false;
+            }
+            chart.update();
+        }
+
+        function calculateRegression() {
+            const n = studyData.length;
+            const sumX = studyData.reduce((sum, d) => sum + d.hours, 0);
+            const sumY = studyData.reduce((sum, d) => sum + d.score, 0);
+            const sumXY = studyData.reduce((sum, d) => sum + d.hours * d.score, 0);
+            const sumX2 = studyData.reduce((sum, d) => sum + d.hours * d.hours, 0);
+            
+            const k = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const b = (sumY - k * sumX) / n;
+            
+            return {k, b};
+        }
+
+        let regressionLineVisible = false;
+        
+        function calculateBestFitLine() {
+            if (!dataPointsVisible) {
+                alert('请先点击"显示数据点"按钮，让数据出现在坐标系中！');
+                return;
+            }
+            
+            if (studyData.length < 2) {
+                alert('需要至少2个数据点才能计算最佳拟合线！');
+                return;
+            }
+            
+            // 显示计算过程
+            document.getElementById('formulaDisplay').innerHTML = 
+                `🧮 正在用最小二乘法计算最佳拟合线...`;
+            
+            // 计算最佳拟合线
+            const {k, b} = calculateRegression();
+            
+            // 动画展示直线寻找过程
+            animateLineCalculation(k, b);
+        }
+        
+        function animateLineCalculation(finalK, finalB) {
+            const steps = 50;
+            let step = 0;
+            
+            // 创建动画展示直线逐渐接近最佳位置
+            const animateStep = () => {
+                const progress = step / steps;
+                const currentK = finalK * progress;
+                const currentB = finalB * progress;
+                
+                const lineData = [];
+                for (let x = 0; x <= 10; x += 0.1) {
+                    lineData.push({x: x, y: currentK * x + currentB});
+                }
+                
+                chart.data.datasets[1].data = lineData;
+                chart.update();
+                
+                step++;
+                if (step <= steps) {
+                    setTimeout(animateStep, 50);
+                } else {
+                    // 动画结束，显示最终结果
+                    showFinalLine(finalK, finalB);
+                }
+            };
+            
+            animateStep();
+        }
+        
+        function showFinalLine(k, b) {
+            // 显示最终的最佳拟合线
+            const lineData = [];
+            for (let x = 0; x <= 10; x += 0.1) {
+                lineData.push({x: x, y: k * x + b});
+            }
+            
+            chart.data.datasets[1].data = lineData;
+            chart.update();
+            
+            // 计算平方差
+            let totalSquaredError = 0;
+            let errorDetails = [];
+            
+            studyData.forEach((point, index) => {
+                const predictedY = k * point.hours + b;
+                const error = point.score - predictedY;
+                const squaredError = error * error;
+                totalSquaredError += squaredError;
+                
+                errorDetails.push(
+                    `同学${index + 1}: 实际${point.score}分, 预测${predictedY.toFixed(1)}分, 误差平方=${squaredError.toFixed(2)}`
+                );
+            });
+            
+            // 显示公式和解释
+            document.getElementById('formulaDisplay').innerHTML = 
+                `📊 最小二乘法结果：<br>分数 = ${k.toFixed(2)} × 学习时间 + ${b.toFixed(2)}<br><br>🎯 这条直线让所有点到直线的距离平方和最小！`;
+            
+            // 显示平方差计算详情
+            document.getElementById('errorDetails').innerHTML = 
+                errorDetails.join('<br>');
+            document.getElementById('totalError').innerHTML = 
+                `📈 总平方误差 = ${totalSquaredError.toFixed(2)}（这是所有可能直线中最小的！）`;
+            
+            regressionLineVisible = true;
+        }
+        
+        function updateRegressionLine() {
+            // 不再自动更新，改为手动触发
+            if (regressionLineVisible) {
+                const {k, b} = calculateRegression();
+                showFinalLine(k, b);
+            }
+        }
+
+        function makePrediction() {
+            if (!regressionLineVisible) {
+                alert('请先点击"计算最佳拟合线"按钮，建立线性回归模型后再进行预测！');
+                return;
+            }
+            
+            const hours = parseFloat(document.getElementById('studyHours').value);
+            const {k, b} = calculateRegression();
+            const predictedScore = k * hours + b;
+            
+            document.getElementById('predictionResult').innerHTML = 
+                `🎯 预测结果：学习${hours}小时，考试分数大约是${predictedScore.toFixed(1)}分`;
+            
+            // 在图表上显示预测点
+            const predictionDataset = {
+                label: '预测点',
+                data: [{x: hours, y: predictedScore}],
+                backgroundColor: 'green',
+                borderColor: 'green',
+                pointRadius: 10,
+                pointStyle: 'star'
+            };
+            
+            // 移除之前的预测点
+            if (chart.data.datasets.length > 3) {
+                chart.data.datasets.pop();
+            }
+            
+            chart.data.datasets.push(predictionDataset);
+            chart.update();
+        }
+
+        function addData() {
+            const hours = parseFloat(document.getElementById('newHours').value);
+            const score = parseFloat(document.getElementById('newScore').value);
+            
+            if (isNaN(hours) || isNaN(score)) {
+                alert('请输入有效的数字！');
+                return;
+            }
+            
+            studyData.push({hours, score, name: '新同学'});
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            const row = tbody.insertRow();
+            row.innerHTML = `<td>新同学</td><td>${hours}</td><td>${score}</td>`;
+            
+            // 更新图表 - 如果数据点已显示则更新，否则保持隐藏
+            if (dataPointsVisible) {
+                chart.data.datasets[0].data = studyData.map(d => ({x: d.hours, y: d.score}));
+            }
+            
+            // 清除现有的回归线和预测
+            chart.data.datasets[1].data = [];
+            while (chart.data.datasets.length > 2) {
+                chart.data.datasets.pop(); // 移除预测点
+            }
+            regressionLineVisible = false;
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                `📊 已添加新数据！点击"显示数据点"查看更新后的数据，再点击"计算最佳拟合线"重新计算`;
+            document.getElementById('predictionResult').innerHTML = 
+                `点击"预测分数"查看结果`;
+            
+            // 清除平方差记录
+            document.getElementById('errorDetails').innerHTML = '点击"计算最佳拟合线"查看计算过程';
+            document.getElementById('totalError').innerHTML = '';
+            
+            chart.update();
+            
+            // 清空输入框
+            document.getElementById('newHours').value = '';
+            document.getElementById('newScore').value = '';
+        }
+
+        function resetData() {
+            studyData = [
+                {hours: 1, score: 60, name: '小明'},
+                {hours: 2, score: 65, name: '小红'},
+                {hours: 3, score: 75, name: '小刚'},
+                {hours: 4, score: 80, name: '小丽'},
+                {hours: 5, score: 85, name: '小强'},
+                {hours: 6, score: 90, name: '小美'}
+            ];
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            studyData.forEach(d => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${d.name}</td><td>${d.hours}</td><td>${d.score}</td>`;
+            });
+            
+            // 清除数据点和回归线
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            while (chart.data.datasets.length > 2) {
+                chart.data.datasets.pop();
+            }
+            regressionLineVisible = false;
+            dataPointsVisible = false;
+            
+            // 重置按钮状态
+            document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
+            document.getElementById('showDataBtn').style.background = '#dc3545';
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                `📊 数据已重置！点击"显示数据点"查看数据，再点击"计算最佳拟合线"开始计算`;
+            document.getElementById('predictionResult').innerHTML = 
+                `点击"预测分数"查看结果`;
+            
+            // 清除平方差记录
+            document.getElementById('errorDetails').innerHTML = '点击"计算最佳拟合线"查看计算过程';
+            document.getElementById('totalError').innerHTML = '';
+            
+            chart.update();
+        }
+
+        function generateRandomData() {
+            studyData = [];
+            for (let i = 1; i <= 8; i++) {
+                const hours = Math.random() * 8 + 1;
+                const score = hours * 8 + 40 + Math.random() * 20;
+                studyData.push({
+                    hours: Math.round(hours * 10) / 10, 
+                    score: Math.round(Math.min(100, Math.max(0, score))), 
+                    name: `同学${i}`
+                });
+            }
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            studyData.forEach(d => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${d.name}</td><td>${d.hours}</td><td>${d.score}</td>`;
+            });
+            
+            // 清除数据点和回归线
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            while (chart.data.datasets.length > 2) {
+                chart.data.datasets.pop();
+            }
+            regressionLineVisible = false;
+            dataPointsVisible = false;
+            
+            // 重置按钮状态
+            document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
+            document.getElementById('showDataBtn').style.background = '#dc3545';
+            
+            document.getElementById('formulaDisplay').innerHTML = 
+                `📊 已生成随机数据！点击"显示数据点"查看数据，再点击"计算最佳拟合线"开始计算`;
+            document.getElementById('predictionResult').innerHTML = 
+                `点击"预测分数"查看结果`;
+            
+            // 清除平方差记录
+            document.getElementById('errorDetails').innerHTML = '点击"计算最佳拟合线"查看计算过程';
+            document.getElementById('totalError').innerHTML = '';
+            
+            chart.update();
+        }
+
+        // 初始化
+        window.onload = function() {
+            initChart();
+        };
+    </script>
+</body>
+</html>

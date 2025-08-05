@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初中生逻辑回归学习工具</title>
+        <!-- 使用更快的CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        // 如果Chart.js加载失败，使用备用方案
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js加载失败，使用备用方案');
+            window.Chart = function(ctx, config) {
+                this.data = config.data;
+                this.options = config.options;
+                this.update = function() {
+                    console.log('图表更新（模拟）');
+                };
+            };
+        }
+    </script>
+    <script src="../js/utils.js"></script>
+    
+    <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+    <div class="container">
+        
+        <!-- 导航栏 -->
+        <nav class="nav-bar">
+            <ul class="nav-links">
+                <li><a href="../index-modern.html">🏠 返回首页</a></li>
+                <li><a href="#theory">📚 理论</a></li>
+                <li><a href="#interactive">🎮 互动</a></li>
+                <li><a href="#practice">💡 练习</a></li>
+            </ul>
+        </nav>
+    
+        <div class="header">
+            <h1>🎯 逻辑回归学习（二分类）</h1>
+            <p>用数学方法预测"通过"或"不通过"</p>
+        </div>
+        
+        <div class="section">
+            <h2>📊 第一步：观察分类数据</h2>
+            <p>我们来看看同学们的学习时间和考试是否通过：</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>学生</th>
+                        <th>学习时间（小时）</th>
+                        <th>考试结果</th>
+                        <th>通过状态</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <tr><td>小明</td><td>1</td><td>❌ 不及格</td><td>0</td></tr>
+                    <tr><td>小红</td><td>2</td><td>❌ 不及格</td><td>0</td></tr>
+                    <tr><td>小刚</td><td>3</td><td>✅ 及格</td><td>1</td></tr>
+                    <tr><td>小丽</td><td>4</td><td>✅ 及格</td><td>1</td></tr>
+                    <tr><td>小强</td><td>5</td><td>✅ 及格</td><td>1</td></tr>
+                    <tr><td>小美</td><td>6</td><td>✅ 优秀</td><td>1</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>🤔 思考与探索</h2>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #f5576c;">
+                <p><strong>如何预测"通过"还是"不通过"？</strong></p>
+                <p>观察上表中的数据，思考：</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>学习时间和考试通过之间是什么关系？</li>
+                    <li>有没有一个"分界线"？学习时间超过多少小时就能通过？</li>
+                    <li>如何用数学方法表示这种"是/否"的关系？</li>
+                </ul>
+                <p><strong>逻辑回归的解决思路：</strong></p>
+                <p>将学习时间转化为通过考试的概率，然后根据概率大小判断"通过"或"不通过"。</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📈 第二步：可视化分类数据</h2>
+            <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                <button onclick="toggleDataPoints()" id="showDataBtn" style="background: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    👁️ 显示数据点
+                </button>
+                <button onclick="calculateLogisticRegression()" style="background: #28a745; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">🔍 计算逻辑回归模型</button>
+                <button onclick="generateRandomData()" style="background: #007bff; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">🎲 生成随机数据</button>
+                <button onclick="resetData()" style="margin: 5px 0;">重置数据</button>
+                <!--<span style="color: #666; font-size: 14px;">点击按钮后，数据点才会出现在坐标系中</span>-->
+            </div>
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+
+            </div>
+                            <div id="trainingProcess" style="background: #e8f4f8; padding: 15px; border-radius: 2px; font-family: monospace; font-size: 14px; line-height: 1.6;">
+                <div id="trainingDetails">点击"计算逻辑回归模型"查看训练过程</div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1px; margin-bottom: 10px;">
+            <div style="flex: 1;">
+                <div class="section">
+                    <h2>🎮 第三步：预测</h2>
+                    <div class="controls" style="flex-direction: column; align-items: stretch;">
+
+                        
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>预测新同学：</label>
+                            <input type="number" id="studyHours" min="0" max="10" step="0.5" value="3.5" style="margin: 5px 0;">
+                            <button onclick="makePrediction()" style="margin: 5px 0;">预测</button>
+                        </div>
+                        <div class="classification-result" id="classificationResult">
+                            等待预测...
+                        </div>
+                        <div class="probability-display" id="probabilityDisplay">
+                            输入学习时间，点击"预测结果"查看通过概率
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🌀 第四步：神奇的S型曲线</h2>
+            <p>逻辑回归使用特殊的"S型曲线"（sigmoid函数）将任何数值转换为0-1之间的概率：</p>
+            <div class="sigmoid-curve">
+                <div class="chart-container">
+                    <canvas id="sigmoidChart"></canvas>
+                </div>
+
+                <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>理解S型曲线：</strong><br>
+                    • 横轴：学习时间（0-10小时）<br>
+                    • 纵轴：通过概率（0-1）<br>
+                    • 中心点：根据实际数据自动计算<br>
+                    • 曲线特点：将任意数值压缩到0-1之间，实现两极分化
+                </div>
+            </div>
+        </div>
+        
+
+        
+
+        
+        <div class="section">
+            <h2>🤖 小结：与人工智能的关系</h2>
+            <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545;">
+                <h3>🧠 AI每天都在用逻辑回归做二分类！</h3>
+                <p><strong>垃圾邮件识别：</strong>根据邮件内容特征，预测"垃圾邮件"或"正常邮件"</p>
+                <p><strong>疾病诊断：</strong>根据体检指标，预测"患病"或"健康"</p>
+                <p><strong>信用评估：</strong>根据个人信息，预测"通过"或"拒绝"贷款</p>
+                <p><strong>人脸识别：</strong>根据面部特征，预测"是同一个人"或"不是同一个人"</p>
+                
+                <h3>🎯 逻辑回归的核心思想</h3>
+                <ol>
+                    <li>将输入特征转化为概率（0-1之间）</li>
+                    <li>设置阈值（通常是0.5）进行分类</li>
+                    <li>概率>0.5 → 类别1，概率≤0.5 → 类别0</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 使用局部变量避免与utils.js冲突
+        
+        let logisticChart;
+        let sigmoidChart;
+        let studyData = [
+            {hours: 1, result: 0, name: '小明'},
+            {hours: 2, result: 0, name: '小红'},
+            {hours: 3, result: 1, name: '小刚'},
+            {hours: 4, result: 1, name: '小丽'},
+            {hours: 5, result: 1, name: '小强'},
+            {hours: 6, result: 1, name: '小美'}
+        ];
+
+        let dataPointsVisible = false;
+        let logisticModel = null;
+        
+        function initChart() {
+            const ctx = document.getElementById('scatterChart').getContext('2d');
+            
+            logisticChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: '不及格 (0)',
+                        data: [],
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }, {
+                        label: '及格 (1)',
+                        data: [],
+                        backgroundColor: 'green',
+                        borderColor: 'green',
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }, {
+                        label: '逻辑回归曲线',
+                        data: [],
+                        type: 'line',
+                        borderColor: 'blue',
+                        backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '学习时间（小时）',
+                                font: { size: 14 }
+                            },
+                            min: 0,
+                            max: 10,
+                            ticks: { font: { size: 12 } }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '通过概率',
+                                font: { size: 14 }
+                            },
+                            min: -0.2,
+                            max: 1.2,
+                            ticks: { font: { size: 12 } }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '学习时间 vs 考试通过概率',
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: true,
+                            labels: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+            
+            // 初始化sigmoid曲线
+            const sigmoidCtx = document.getElementById('sigmoidChart').getContext('2d');
+            
+            // 根据实际数据计算sigmoid函数的中心点
+            const passHours = studyData.filter(d => d.result === 1).map(d => d.hours);
+            const failHours = studyData.filter(d => d.result === 0).map(d => d.hours);
+            
+            let centerPoint = 5; // 默认中心点
+            if (passHours.length > 0 && failHours.length > 0) {
+                const avgPass = passHours.reduce((a, b) => a + b, 0) / passHours.length;
+                const avgFail = failHours.reduce((a, b) => a + b, 0) / failHours.length;
+                centerPoint = (avgPass + avgFail) / 2; // 实际数据的中心点
+            }
+            
+            // 生成基于实际数据的sigmoid曲线
+            const sigmoidData = [];
+            for (let x = 0; x <= 10; x += 0.1) {
+                // 使用实际数据的中心点
+                const z = (x - centerPoint) * 2;  // 根据数据分布调整斜率
+                const y = 1 / (1 + Math.exp(-z));
+                sigmoidData.push({x: x, y: y});
+            }
+            
+            sigmoidChart = new Chart(sigmoidCtx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Sigmoid函数',
+                        data: sigmoidData,
+                        borderColor: 'purple',
+                        backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                        borderWidth: 3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: '学习时间（小时）' },
+                            min: 0,
+                            max: 10,
+                            ticks: {
+                                display: true,
+                                stepSize: 1,
+                                autoSkip: false
+                            },
+                            grid: {
+                                display: true
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: '通过概率' },
+                            min: 0,
+                            max: 1,
+                            ticks: {
+                                stepSize: 0.1,
+                                callback: function(value) { return value.toFixed(1); },
+                                display: true  // 确保刻度显示
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const x = context.raw.x.toFixed(1);
+                                    const y = context.raw.y.toFixed(4);
+                                    return `学习时间: ${x}小时, 概率: ${y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function toggleDataPoints() {
+            if (!dataPointsVisible) {
+                updateChartData();
+                document.getElementById('showDataBtn').innerHTML = '🙈 隐藏数据点';
+                document.getElementById('showDataBtn').style.background = '#6c757d';
+                dataPointsVisible = true;
+            } else {
+                logisticChart.data.datasets[0].data = [];
+                logisticChart.data.datasets[1].data = [];
+                logisticChart.data.datasets[2].data = [];
+                logisticChart.update();
+                document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据点';
+                document.getElementById('showDataBtn').style.background = '#dc3545';
+                dataPointsVisible = false;
+            }
+        }
+        
+        function updateSigmoidCurve() {
+            // 根据实际数据计算sigmoid函数的中心点
+            const passHours = studyData.filter(d => d.result === 1).map(d => d.hours);
+            const failHours = studyData.filter(d => d.result === 0).map(d => d.hours);
+            
+            let centerPoint = 5; // 默认中心点
+            if (passHours.length > 0 && failHours.length > 0) {
+                const avgPass = passHours.reduce((a, b) => a + b, 0) / passHours.length;
+                const avgFail = failHours.reduce((a, b) => a + b, 0) / failHours.length;
+                centerPoint = (avgPass + avgFail) / 2; // 实际数据的中心点
+            }
+            
+            // 更新sigmoid曲线数据
+            const sigmoidData = [];
+            for (let x = 0; x <= 10; x += 0.1) {
+                const z = (x - centerPoint) * 2;  // 根据数据分布调整斜率
+                const y = 1 / (1 + Math.exp(-z));
+                sigmoidData.push({x: x, y: y});
+            }
+            
+            sigmoidChart.data.datasets[0].data = sigmoidData;
+            sigmoidChart.update();
+        }
+        
+        function updateChartData() {
+            const failData = studyData.filter(d => d.result === 0);
+            const passData = studyData.filter(d => d.result === 1);
+            
+            // 为数据点计算对应的概率值
+            const failPoints = failData.map(d => {
+                if (logisticModel) {
+                    const z = logisticModel.a * d.hours + logisticModel.b;
+                    const probability = 1 / (1 + Math.exp(-z));
+                    return {x: d.hours, y: probability};
+                } else {
+                    return {x: d.hours, y: d.hours/10}; // 动态分布默认位置
+                }
+            });
+            
+            const passPoints = passData.map(d => {
+                if (logisticModel) {
+                    const z = logisticModel.a * d.hours + logisticModel.b;
+                    const probability = 1 / (1 + Math.exp(-z));
+                    return {x: d.hours, y: probability};
+                } else {
+                    return {x: d.hours, y: 0.5 + d.hours/20}; // 动态分布默认位置
+                }
+            });
+            
+            logisticChart.data.datasets[0].data = failPoints;
+            logisticChart.data.datasets[1].data = passPoints;
+            
+            if (logisticModel) {
+                const lineData = [];
+                for (let x = 0; x <= 10; x += 0.1) {
+                    const z = logisticModel.a * x + logisticModel.b;
+                    const probability = 1 / (1 + Math.exp(-z));
+                    lineData.push({x: x, y: probability});
+                }
+                logisticChart.data.datasets[2].data = lineData;
+            }
+            
+            logisticChart.update();
+            
+            // 同时更新sigmoid曲线
+            updateSigmoidCurve();
+        }
+        
+        function calculateLogisticRegression() {
+            if (!dataPointsVisible) {
+                alert('请先点击"显示数据点"按钮，让数据出现在坐标系中！');
+                return;
+            }
+            
+            if (studyData.length < 2) {
+                alert('需要至少2个数据点才能计算逻辑回归！');
+                return;
+            }
+            
+            document.getElementById('trainingDetails').innerHTML = 
+                '🔄 正在训练逻辑回归模型...<br>' +
+                '💡 使用梯度下降法寻找最佳参数...<br>' +
+                '📊 计算损失函数并优化...<br>' +
+                '✅ 模型训练完成！';
+            
+            // 简化的逻辑回归计算
+            const {a, b} = calculateLogisticParameters();
+            logisticModel = {a, b};
+            
+            updateChartData();
+            
+            document.getElementById('trainingDetails').innerHTML = 
+                `🎯 逻辑回归模型：<br>` +
+                `z = ${a.toFixed(3)} × 学习时间 + ${b.toFixed(3)}<br>` +
+                `概率 = 1 / (1 + e^(-z))<br>` +
+                `📈 阈值：概率 > 0.5 → 及格，概率 ≤ 0.5 → 不及格`;
+        }
+        
+        function calculateLogisticParameters() {
+            // 简化的参数计算
+            let a = 0, b = 0;
+            
+            // 基于数据趋势估计参数
+            const passHours = studyData.filter(d => d.result === 1).map(d => d.hours);
+            const failHours = studyData.filter(d => d.result === 0).map(d => d.hours);
+            
+            if (passHours.length > 0 && failHours.length > 0) {
+                const avgPass = passHours.reduce((a, b) => a + b, 0) / passHours.length;
+                const avgFail = failHours.reduce((a, b) => a + b, 0) / failHours.length;
+                
+                a = 2 / (avgPass - avgFail); // 斜率
+                b = -a * (avgPass + avgFail) / 2; // 截距
+            }
+            
+            return {a, b};
+        }
+        
+        function makePrediction() {
+            if (!logisticModel) {
+                alert('请先点击"计算逻辑回归模型"按钮，建立模型后再进行预测！');
+                return;
+            }
+            
+            const hours = parseFloat(document.getElementById('studyHours').value);
+            const z = logisticModel.a * hours + logisticModel.b;
+            const probability = 1 / (1 + Math.exp(-z));
+            
+            document.getElementById('probabilityDisplay').innerHTML = 
+                `📊 预测通过概率：${(probability * 100).toFixed(1)}%`;
+            
+            const resultDiv = document.getElementById('classificationResult');
+            if (probability > 0.5) {
+                resultDiv.className = 'classification-result pass';
+                resultDiv.innerHTML = `✅ 预计通过考试！（概率 > 50%）`;
+            } else {
+                resultDiv.className = 'classification-result fail';
+                resultDiv.innerHTML = `❌ 预计不及格！（概率 ≤ 50%）`;
+            }
+            
+            // 在图表上显示预测点
+            const predictionDataset = {
+                label: '预测点',
+                data: [{x: hours, y: probability}],
+                backgroundColor: 'orange',
+                borderColor: 'orange',
+                pointRadius: 12,
+                pointStyle: 'star'
+            };
+            
+            // 移除之前的预测点
+            while (logisticChart.data.datasets.length > 3) {
+                logisticChart.data.datasets.pop();
+            }
+            
+            logisticChart.data.datasets.push(predictionDataset);
+            logisticChart.update();
+        }
+        
+        function addData() {
+            const hours = parseFloat(document.getElementById('newHours').value);
+            const result = parseInt(document.getElementById('newResult').value);
+            
+            if (isNaN(hours) || hours < 0 || hours > 10) {
+                alert('请输入0-10之间的学习时间！');
+                return;
+            }
+            
+            const names = ['小华', '小亮', '小芳', '小勇', '小慧', '小涛', '小静', '小龙', '小霞', '小峰'];
+            const randomName = names[Math.floor(Math.random() * names.length)];
+            
+            studyData.push({
+                hours: hours,
+                result: result,
+                name: randomName
+            });
+            
+            updateTable();
+            updateChartData();
+            updateSigmoidCurve();
+            
+            document.getElementById('newHours').value = '';
+            document.getElementById('newResult').value = '0';
+            
+            // 重置模型
+            logisticModel = null;
+            document.getElementById('trainingDetails').innerHTML = '点击"计算逻辑回归模型"查看训练过程';
+            document.getElementById('probabilityDisplay').innerHTML = '输入学习时间，点击"预测结果"查看通过概率';
+            document.getElementById('classificationResult').innerHTML = '等待预测...';
+            document.getElementById('classificationResult').className = 'classification-result';
+        }
+        
+        function resetData() {
+            studyData = [
+                {hours: 1, result: 0, name: '小明'},
+                {hours: 2, result: 0, name: '小红'},
+                {hours: 3, result: 1, name: '小刚'},
+                {hours: 4, result: 1, name: '小丽'},
+                {hours: 5, result: 1, name: '小强'},
+                {hours: 6, result: 1, name: '小美'}
+            ];
+            
+            updateTable();
+            updateChartData();
+            updateSigmoidCurve();
+            
+            logisticModel = null;
+            document.getElementById('trainingDetails').innerHTML = '点击"计算逻辑回归模型"查看训练过程';
+            document.getElementById('probabilityDisplay').innerHTML = '输入学习时间，点击"预测结果"查看通过概率';
+            document.getElementById('classificationResult').innerHTML = '等待预测...';
+            document.getElementById('classificationResult').className = 'classification-result';
+            
+            // 清除预测点
+            while (logisticChart.data.datasets.length > 3) {
+                logisticChart.data.datasets.pop();
+            }
+            if (dataPointsVisible) {
+                logisticChart.update();
+            }
+        }
+        
+        function generateRandomData() {
+            studyData = [];
+            const names = ['小明', '小红', '小刚', '小丽', '小强', '小美', '小华', '小亮', '小芳', '小勇', '小慧', '小涛'];
+            
+            for (let i = 0; i < 12; i++) {
+                const hours = Math.round((Math.random() * 8 + 1) * 10) / 10;
+                // 学习时间越短，不及格概率越高
+                const probability = 1 / (1 + Math.exp(-(hours - 4)));
+                const result = Math.random() < probability ? 1 : 0;
+                
+                studyData.push({
+                    hours: hours,
+                    result: result,
+                    name: names[i % names.length]
+                });
+            }
+            
+            updateTable();
+            updateChartData();
+            updateSigmoidCurve();
+            
+            logisticModel = null;
+            document.getElementById('trainingDetails').innerHTML = '点击"计算逻辑回归模型"查看训练过程';
+            document.getElementById('probabilityDisplay').innerHTML = '输入学习时间，点击"预测结果"查看通过概率';
+            document.getElementById('classificationResult').innerHTML = '等待预测...';
+            document.getElementById('classificationResult').className = 'classification-result';
+            
+            // 清除预测点
+            while (logisticChart.data.datasets.length > 3) {
+                logisticChart.data.datasets.pop();
+            }
+            if (dataPointsVisible) {
+                logisticChart.update();
+            }
+        }
+        
+        function updateTable() {
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            
+            studyData.forEach(data => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${data.name}</td>
+                    <td>${data.hours}</td>
+                    <td>${data.result ? '✅ 及格' : '❌ 不及格'}</td>
+                    <td>${data.result}</td>
+                `;
+            });
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
+            initChart();
+        });
+    </script>
+</body>

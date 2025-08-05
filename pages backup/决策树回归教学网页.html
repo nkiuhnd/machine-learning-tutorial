@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初中生决策树回归学习工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        
+        .tree-container {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        .tree-node {
+            display: inline-block;
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .tree-leaf {
+            display: inline-block;
+            background: #c8e6c9;
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .decision-arrow {
+            font-size: 20px;
+            color: #ff7e5f;
+            margin: 0 10px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .comparison-table th {
+            background: #ff7e5f;
+            color: white;
+        }
+        
+        .rule-example {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .advantage-card {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .interactive-demo {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .scenario-selector {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .scenario-btn {
+            padding: 10px 15px;
+            border: 2px solid #4caf50;
+            background: white;
+            color: #4caf50;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .scenario-btn:hover, .scenario-btn.active {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .result-display {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #155724;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 决策树回归学习工具</h1>
+            <p>用房地产价格预测理解非线性决策逻辑</p>
+        </div>
+
+        <div class="section">
+            <h2>🤔 为什么需要决策树回归？</h2>
+            <div class="comparison-table">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>情况</th>
+                            <th>线性回归</th>
+                            <th>多项式回归</th>
+                            <th>决策树回归</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>学区房溢价</td>
+                            <td>只能线性加价</td>
+                            <td>复杂曲线难理解</td>
+                            <td>直接"是/否"判断</td>
+                        </tr>
+                        <tr>
+                            <td>面积阈值效应</td>
+                            <td>无法处理突变</td>
+                            <td>需要复杂函数</td>
+                            <td>自然"大于/小于"分裂</td>
+                        </tr>
+                        <tr>
+                            <td>可解释性</td>
+                            <td>需要数学知识</td>
+                            <td>公式难理解</td>
+                            <td>像人类思考逻辑</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🌳 决策树长什么样？</h2>
+            <div class="tree-container">
+                <div class="tree-node">
+                    面积 > 120m²？
+                </div>
+                <div class="decision-arrow">↓ 是</div>
+                <div class="tree-node">
+                    是学区房？
+                </div>
+                <div class="decision-arrow">↓ 是</div>
+                <div class="tree-leaf">
+                    预测价格：500万
+                </div>
+                <div class="decision-arrow">↓ 否</div>
+                <div class="tree-leaf">
+                    预测价格：350万
+                </div>
+                <br>
+                <div class="decision-arrow">↓ 否</div>
+                <div class="tree-node">
+                    房龄 < 5年？
+                </div>
+                <div class="decision-arrow">↓ 是</div>
+                <div class="tree-leaf">
+                    预测价格：300万
+                </div>
+                <div class="decision-arrow">↓ 否</div>
+                <div class="tree-leaf">
+                    预测价格：250万
+                </div>
+            </div>
+            <p style="text-align: center; color: #666; font-style: italic;">
+                💡 每个分叉点都是一个"如果...那么..."的判断，最终到达一个价格预测
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>📊 真实案例：房价预测决策树</h2>
+            <div class="interactive-demo">
+                <h3>🏠 选择房子特征，看决策树如何预测价格</h3>
+                <div class="scenario-selector">
+                    <button class="scenario-btn active" onclick="selectScenario('学区房大户型', event)">学区房+大户型</button>
+                    <button class="scenario-btn" onclick="selectScenario('新小区小户型', event)">新小区+小户型</button>
+                    <button class="scenario-btn" onclick="selectScenario('老小区中户型', event)">老小区+中户型</button>
+                    <button class="scenario-btn" onclick="selectScenario('郊区大户型', event)">郊区+大户型</button>
+                </div>
+                <div id="scenarioTree" class="tree-container">
+                    <!-- 动态生成的决策树路径 -->
+                </div>
+                <div class="result-display" id="predictionResult">
+                    选择上方场景查看决策过程
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 决策树的核心优势</h2>
+            <div class="advantage-card">
+                <h4>🧠 像人类一样思考</h4>
+                <p>决策树的判断逻辑和我们日常思考方式完全一致：先问关键问题，再逐步细化。</p>
+                <div class="rule-example">
+                    <strong>人类思维：</strong>"这套房子贵不贵？先看看是不是学区房，再看看面积多大..."
+                </div>
+            </div>
+
+            <div class="advantage-card">
+                <h4>📈 处理非线性关系</h4>
+                <p>不需要复杂的数学公式，通过"分裂"自然处理各种非线性关系。</p>
+                <div class="rule-example">
+                    <strong>面积效应：</strong>100㎡→200万，120㎡→250万，但150㎡可能还是250万（超过阈值后单价下降）
+                </div>
+            </div>
+
+            <div class="advantage-card">
+                <h4>🎯 可解释性强</h4>
+                <p>任何人都能看懂决策树，不需要数学背景。</p>
+                <div class="rule-example">
+                    <strong>中介解释：</strong>"这套房子贵，因为它满足'学区房+大户型'这两个条件"
+                </div>
+            </div>
+
+            <div class="advantage-card">
+                <h4>⚡ 自动特征选择</h4>
+                <p>决策树会自动找出哪些因素最重要，忽略无关因素。</p>
+                <div class="rule-example">
+                    <strong>实际发现：</strong>在房价预测中，决策树发现"学区"和"面积"比"楼层"更重要
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 什么时候用决策树回归？</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px;">
+                    <h4>✅ 适用场景</h4>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                        <li>特征有明显的"阈值"效应</li>
+                        <li>需要向非专业人士解释模型</li>
+                        <li>数据包含类别特征（如学区、朝向）</li>
+                        <li>关系复杂但逻辑清晰</li>
+                        <li>需要快速原型验证</li>
+                    </ul>
+                </div>
+                <div style="background: #f8d7da; padding: 15px; border-radius: 8px;">
+                    <h4>❌ 不适用场景</h4>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                        <li>需要精确连续预测</li>
+                        <li>数据量非常小</li>
+                        <li>特征间有复杂交互</li>
+                        <li>需要处理大量数值特征</li>
+                        <li>对过拟合敏感的场景</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎓 学习总结</h2>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px;">
+                <h3>📚 从线性到决策树的进化</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 15px 0;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                        <h4>📈 线性回归</h4>
+                        <p>直线关系，简单但局限</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                        <h4>🏠 多元/多项式</h4>
+                        <p>复杂关系，但难解释</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                        <h4>🌳 决策树</h4>
+                        <p>非线性+易解释</p>
+                    </div>
+                </div>
+                
+                <h3>🎯 核心记忆点</h3>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+                    <p><strong>口诀：</strong>"线性像尺子，多项式像曲线，决策树像分叉路口"</p>
+                    <p><strong>关键理解：</strong>决策树用"如果...那么..."的逻辑，让复杂问题变得像选择题一样简单！</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scenarios = {
+            '学区房大户型': {
+                path: [
+                    {question: '面积 > 120m²？', answer: '是'},
+                    {question: '是学区房？', answer: '是'},
+                    {result: '预测价格：500万', reason: '满足"大户型+学区房"的黄金组合'}
+                ]
+            },
+            '新小区小户型': {
+                path: [
+                    {question: '面积 > 120m²？', answer: '否'},
+                    {question: '房龄 < 5年？', answer: '是'},
+                    {question: '面积 > 90m²？', answer: '否'},
+                    {result: '预测价格：280万', reason: '新小区小户型，适合刚需'}
+                ]
+            },
+            '老小区中户型': {
+                path: [
+                    {question: '面积 > 120m²？', answer: '否'},
+                    {question: '房龄 < 5年？', answer: '否'},
+                    {question: '面积 > 90m²？', answer: '是'},
+                    {result: '预测价格：220万', reason: '老小区中户型，性价比较高'}
+                ]
+            },
+            '郊区大户型': {
+                path: [
+                    {question: '面积 > 120m²？', answer: '是'},
+                    {question: '是学区房？', answer: '否'},
+                    {question: '房龄 < 5年？', answer: '是'},
+                    {result: '预测价格：380万', reason: '大户型但非学区，郊区价格优势'}
+                ]
+            }
+        };
+
+        function selectScenario(scenarioName, event) {
+            // 更新按钮状态
+            document.querySelectorAll('.scenario-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // 如果是页面加载时调用，激活默认按钮
+                document.querySelector('.scenario-btn').classList.add('active');
+            }
+
+            // 获取场景数据
+            const scenario = scenarios[scenarioName];
+            
+            // 生成决策树路径
+            let treeHTML = '';
+            scenario.path.forEach((step, index) => {
+                if (step.question) {
+                    treeHTML += `
+                        <div class="tree-node">
+                            ${step.question}
+                        </div>
+                        <div class="decision-arrow">↓ ${step.answer}</div>
+                    `;
+                } else {
+                    treeHTML += `
+                        <div class="tree-leaf">
+                            ${step.result}
+                        </div>
+                    `;
+                }
+            });
+
+            // 更新显示
+            document.getElementById('scenarioTree').innerHTML = treeHTML;
+            
+            const lastStep = scenario.path[scenario.path.length - 1];
+            document.getElementById('predictionResult').innerHTML = 
+                `<strong>${lastStep.result}</strong><br><br>
+                <em>${lastStep.reason}</em>`;
+        }
+
+        // 页面加载时显示默认场景
+        window.onload = function() {
+            selectScenario('学区房大户型');
+        };
+    </script>
+</body>
+</html>

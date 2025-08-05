@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初中生决策树分类学习工具</title>
+        <!-- 使用更快的CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        // 如果Chart.js加载失败，使用备用方案
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js加载失败，使用备用方案');
+            window.Chart = function(ctx, config) {
+                this.data = config.data;
+                this.options = config.options;
+                this.update = function() {
+                    console.log('图表更新（模拟）');
+                };
+            };
+        }
+    </script>
+    <script src="../js/utils.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+    <div class="container">
+        
+        <!-- 导航栏 -->
+        <nav class="nav-bar">
+            <ul class="nav-links">
+                <li><a href="../index-modern.html">🏠 返回首页</a></li>
+                <li><a href="#theory">📚 理论</a></li>
+                <li><a href="#interactive">🎮 互动</a></li>
+                <li><a href="#practice">💡 练习</a></li>
+            </ul>
+        </nav>
+    
+        <div class="header">
+            <h1>🌳 决策树分类学习</h1>
+            <p>用树形结构做"如果...那么..."的判断</p>
+        </div>
+        
+        <div class="section">
+            <h2>📊 第一步：观察多维数据</h2>
+            <p>我们来看看水果的特征和分类：</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>水果</th>
+                        <th>重量(g)</th>
+                        <th>颜色</th>
+                        <th>形状</th>
+                        <th>类别</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <tr><td>苹果1</td><td>150</td><td>红色</td><td>圆形</td><td>苹果</td></tr>
+                    <tr><td>苹果2</td><td>180</td><td>绿色</td><td>圆形</td><td>苹果</td></tr>
+                    <tr><td>橙子1</td><td>200</td><td>橙色</td><td>圆形</td><td>橙子</td></tr>
+                    <tr><td>橙子2</td><td>220</td><td>橙色</td><td>圆形</td><td>橙子</td></tr>
+                    <tr><td>香蕉1</td><td>120</td><td>黄色</td><td>长形</td><td>香蕉</td></tr>
+                    <tr><td>香蕉2</td><td>140</td><td>黄色</td><td>长形</td><td>香蕉</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>🤔 思考与探索</h2>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #00f2fe;">
+                <p><strong>如何根据特征判断水果种类？</strong></p>
+                <p>观察上表中的数据，思考：</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>哪种特征最能区分不同水果？</li>
+                    <li>如果先按颜色分，会出现什么问题？</li>
+                    <li>如果先按形状分，结果会怎样？</li>
+                    <li>如何构建一个"如果...那么..."的决策树？</li>
+                </ul>
+                <p><strong>决策树的核心思想：</strong></p>
+                <p>通过一系列"是/否"问题，逐步缩小范围，最终确定类别。</p>
+            </div>
+        </div>
+        
+
+        
+        <div class="section">
+            <h2>📈 第二步：数据可视化</h2>
+            <div style="margin-bottom: 15px;">
+                <button onclick="toggleDataPoints()" id="showDataBtn" style="background: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    👁️ 显示数据分布
+                </button>
+                <button onclick="buildDecisionTree()" style="margin: 5px 0; background: #28a745; font-weight: bold;">🔍 构建决策树</button>
+                <button onclick="resetData()" style="margin: 5px 0;">重置数据</button>
+                <button onclick="generateRandomData()" style="margin: 5px 0;">生成随机数据</button>
+               
+            </div>
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+         <div class="section">
+            <h2>🌲 可视化决策树</h2>
+            <p>让我们看看决策树是如何一步步做判断的：</p>
+            <div class="tree-container" id="treeContainer"></div>
+        </div>
+        <div class="section">
+            <h2>🛤️ 决策路径追踪</h2>
+            <div id="decisionPath" class="decision-path">
+                <p>💡 构建决策树后，这里会显示预测时的决策路径</p>
+                <div id="pathDetails">点击"构建决策树"开始分析</div>
+            </div>
+        </div>
+
+
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <div style="flex: 1;">
+                <div class="section">
+                    <h2>🎮 第四步：动手实验</h2>
+                    <div class="controls" style="flex-direction: column; align-items: stretch;">
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <!-- <label>添加新水果：</label>
+                            <input type="number" id="newWeight" placeholder="重量(g)" min="50" max="300" style="margin: 5px 0;">
+                            <select id="newColor" style="margin: 5px 0;">
+                                <option value="红色">红色</option>
+                                <option value="绿色">绿色</option>
+                                <option value="橙色">橙色</option>
+                                <option value="黄色">黄色</option>
+                            </select>
+                            <select id="newShape" style="margin: 5px 0;">
+                                <option value="圆形">圆形</option>
+                                <option value="长形">长形</option>
+                                <option value="椭圆形">椭圆形</option>
+                            </select>
+                            <select id="newCategory" style="margin: 5px 0;">
+                                <option value="苹果">苹果</option>
+                                <option value="橙子">橙子</option>
+                                <option value="香蕉">香蕉</option>
+                            </select>
+                            <button onclick="addData()" style="margin: 5px 0;">添加数据</button> -->
+                        </div>
+                        
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>预测新水果：</label>
+                            <input type="number" id="testWeight" min="50" max="300" value="160" style="margin: 5px 0;">
+                            <select id="testColor" style="margin: 5px 0;">
+                                <option value="红色">红色</option>
+                                <option value="绿色">绿色</option>
+                                <option value="橙色">橙色</option>
+                                <option value="黄色">黄色</option>
+                            </select>
+                            <select id="testShape" style="margin: 5px 0;">
+                                <option value="圆形">圆形</option>
+                                <option value="长形">长形</option>
+                                <option value="椭圆形">椭圆形</option>
+                            </select>
+                            <button onclick="makePrediction()" style="margin: 5px 0;">预测种类</button>
+                        </div>
+                        <h2>🎯 预测结果</h2>
+                        <div class="prediction-result" id="predictionResult">
+                            输入水果特征，点击"预测种类"查看结果
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+        
+
+        
+        <div class="section">
+            <h2>🤖 小结：与人工智能的关系</h2>
+            <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 5px solid #17a2b8;">
+                <h3>🧠 AI每天都在用决策树做选择！</h3>
+                <p><strong>医疗诊断：</strong>根据症状特征，判断"患病"或"健康"</p>
+                <p><strong>客户分类：</strong>根据消费行为，判断"优质客户"或"普通客户"</p>
+                <p><strong>风险评估：</strong>根据信用记录，判断"高风险"或"低风险"</p>
+                <p><strong>游戏AI：</strong>根据游戏状态，选择"攻击"或"防守"策略</p>
+                
+                <h3>🎯 决策树的优势</h3>
+                <ol>
+                    <li>🤖 可解释性强：每个决策都有明确理由</li>
+                    <li>⚡ 计算速度快：只需简单比较</li>
+                    <li>🎯 不需要复杂数学：易于理解</li>
+                    <li>🔍 可以处理非数值特征</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 使用局部变量避免与utils.js冲突
+        
+        let treeClassChart;
+        let fruitData = [
+            {weight: 150, color: '红色', shape: '圆形', category: '苹果'},
+            {weight: 180, color: '绿色', shape: '圆形', category: '苹果'},
+            {weight: 200, color: '橙色', shape: '圆形', category: '橙子'},
+            {weight: 220, color: '橙色', shape: '圆形', category: '橙子'},
+            {weight: 120, color: '黄色', shape: '长形', category: '香蕉'},
+            {weight: 140, color: '黄色', shape: '长形', category: '香蕉'}
+        ];
+
+        let dataPointsVisible = false;
+        let decisionTree = null;
+        
+        function initChart() {
+            const ctx = document.getElementById('scatterChart').getContext('2d');
+            
+            treeClassChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: '苹果',
+                        data: [],
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        pointRadius: 8
+                    }, {
+                        label: '橙子',
+                        data: [],
+                        backgroundColor: 'orange',
+                        borderColor: 'orange',
+                        pointRadius: 8
+                    }, {
+                        label: '香蕉',
+                        data: [],
+                        backgroundColor: 'yellow',
+                        borderColor: 'yellow',
+                        pointRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '重量(g)',
+                                font: { size: 14 }
+                            },
+                            min: 50,
+                            max: 300
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '形状编码',
+                                font: { size: 14 }
+                            },
+                            min: -0.5,
+                            max: 2.5,
+                            ticks: {
+                                callback: function(value) {
+                                    return ['圆形', '椭圆形', '长形'][value] || '';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '水果特征分布图',
+                            font: { size: 16 }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function toggleDataPoints() {
+            if (!dataPointsVisible) {
+                updateChartData();
+                document.getElementById('showDataBtn').innerHTML = '🙈 隐藏数据分布';
+                document.getElementById('showDataBtn').style.background = '#6c757d';
+                dataPointsVisible = true;
+            } else {
+                treeClassChart.data.datasets[0].data = [];
+                treeClassChart.data.datasets[1].data = [];
+                treeClassChart.data.datasets[2].data = [];
+                treeClassChart.update();
+                document.getElementById('showDataBtn').innerHTML = '👁️ 显示数据分布';
+                document.getElementById('showDataBtn').style.background = '#dc3545';
+                dataPointsVisible = false;
+            }
+        }
+        
+        function updateChartData() {
+            const appleData = fruitData.filter(d => d.category === '苹果').map(d => ({x: d.weight, y: 0}));
+            const orangeData = fruitData.filter(d => d.category === '橙子').map(d => ({x: d.weight, y: 1}));
+            const bananaData = fruitData.filter(d => d.category === '香蕉').map(d => ({x: d.weight, y: 2}));
+            
+            treeClassChart.data.datasets[0].data = appleData;
+            treeClassChart.data.datasets[1].data = orangeData;
+            treeClassChart.data.datasets[2].data = bananaData;
+            
+            treeClassChart.update();
+        }
+        
+        function buildDecisionTree() {
+            if (!dataPointsVisible) {
+                alert('请先点击"显示数据分布"按钮，让数据出现在坐标系中！');
+                return;
+            }
+            
+            if (fruitData.length < 3) {
+                alert('需要至少3个数据点才能构建决策树！');
+                return;
+            }
+            
+            // 构建简单的决策树
+            decisionTree = {
+                feature: '形状',
+                threshold: '长形',
+                left: {
+                    value: '香蕉',
+                    reason: '形状是长形 → 香蕉'
+                },
+                right: {
+                    feature: '颜色',
+                    threshold: '橙色',
+                    left: {
+                        value: '橙子',
+                        reason: '形状不是长形，颜色是橙色 → 橙子'
+                    },
+                    right: {
+                        value: '苹果',
+                        reason: '形状不是长形，颜色不是橙色 → 苹果'
+                    }
+                }
+            };
+            
+            displayTree();
+            
+            document.getElementById('pathDetails').innerHTML = 
+                `🌳 决策树已构建！<br>` +
+                `📊 根节点：按"形状"分裂<br>` +
+                `🎯 第一层：形状=长形 → 香蕉<br>` +
+                `🎯 第二层：形状≠长形 → 按"颜色"分裂<br>` +
+                `🎯 第三层：颜色=橙色 → 橙子，颜色≠橙色 → 苹果`;
+        }
+        
+        function displayTree() {
+            const container = d3.select("#treeContainer");
+            container.selectAll("*").remove();
+            
+            const width = 800;
+            const height = 300;
+            
+            const svg = container.append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            
+            // 绘制简单的决策树
+            const nodes = [
+                {x: 400, y: 50, text: "形状=长形?", type: "decision"},
+                {x: 200, y: 150, text: "香蕉", type: "leaf"},
+                {x: 600, y: 150, text: "颜色=橙色?", type: "decision"},
+                {x: 500, y: 250, text: "橙子", type: "leaf"},
+                {x: 700, y: 250, text: "苹果", type: "leaf"}
+            ];
+            
+            const links = [
+                {source: 0, target: 1, label: "是"},
+                {source: 0, target: 2, label: "否"},
+                {source: 2, target: 3, label: "是"},
+                {source: 2, target: 4, label: "否"}
+            ];
+            
+            // 绘制连线
+            links.forEach(link => {
+                svg.append("line")
+                    .attr("x1", nodes[link.source].x)
+                    .attr("y1", nodes[link.source].y)
+                    .attr("x2", nodes[link.target].x)
+                    .attr("y2", nodes[link.target].y)
+                    .attr("stroke", "#999")
+                    .attr("stroke-width", 2);
+                    
+                svg.append("text")
+                    .attr("x", (nodes[link.source].x + nodes[link.target].x) / 2)
+                    .attr("y", (nodes[link.source].y + nodes[link.target].y) / 2 - 5)
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "12px")
+                    .text(link.label);
+            });
+            
+            // 绘制节点
+            nodes.forEach((node, i) => {
+                const g = svg.append("g")
+                    .attr("transform", `translate(${node.x}, ${node.y})`);
+                    
+                g.append("circle")
+                    .attr("r", 30)
+                    .attr("fill", node.type === "decision" ? "#e3f2fd" : "#c8e6c9")
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", 2);
+                    
+                g.append("text")
+                    .attr("text-anchor", "middle")
+                    .attr("dy", 5)
+                    .attr("font-size", "12px")
+                    .text(node.text);
+            });
+        }
+        
+        function makePrediction() {
+            if (!decisionTree) {
+                alert('请先点击"构建决策树"按钮！');
+                return;
+            }
+            
+            const weight = parseFloat(document.getElementById('testWeight').value);
+            const color = document.getElementById('testColor').value;
+            const shape = document.getElementById('testShape').value;
+            
+            let result, path;
+            
+            // 执行决策树预测
+            if (shape === '长形') {
+                result = '香蕉';
+                path = '形状=长形 → 香蕉';
+            } else if (color === '橙色') {
+                result = '橙子';
+                path = '形状≠长形 → 颜色=橙色 → 橙子';
+            } else {
+                result = '苹果';
+                path = '形状≠长形 → 颜色≠橙色 → 苹果';
+            }
+            
+            document.getElementById('predictionResult').innerHTML = 
+                `🎯 预测结果：重量${weight}g，${color}，${shape} → ${result}<br><br>` +
+                `🛤️ 决策路径：${path}`;
+        }
+        
+        function addData() {
+            const weight = parseFloat(document.getElementById('newWeight').value);
+            const color = document.getElementById('newColor').value;
+            const shape = document.getElementById('newShape').value;
+            const category = document.getElementById('newCategory').value;
+            
+            if (isNaN(weight)) {
+                alert('请输入有效的重量！');
+                return;
+            }
+            
+            fruitData.push({weight, color, shape, category});
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            const row = tbody.insertRow();
+            row.innerHTML = `<td>新水果</td><td>${weight}</td><td>${color}</td><td>${shape}</td><td>${category}</td>`;
+            
+            // 更新图表
+            if (dataPointsVisible) {
+                updateChartData();
+            }
+            
+            // 重置决策树
+            decisionTree = null;
+            document.getElementById('pathDetails').innerHTML = '点击"构建决策树"重新分析';
+            
+            // 清除输入
+            document.getElementById('newWeight').value = '';
+        }
+        
+        function resetData() {
+            fruitData = [
+                {weight: 150, color: '红色', shape: '圆形', category: '苹果'},
+                {weight: 180, color: '绿色', shape: '圆形', category: '苹果'},
+                {weight: 200, color: '橙色', shape: '圆形', category: '橙子'},
+                {weight: 220, color: '橙色', shape: '圆形', category: '橙子'},
+                {weight: 120, color: '黄色', shape: '长形', category: '香蕉'},
+                {weight: 140, color: '黄色', shape: '长形', category: '香蕉'}
+            ];
+            
+            decisionTree = null;
+            
+            // 重置表格
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            fruitData.forEach((data, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>水果${index+1}</td><td>${data.weight}</td><td>${data.color}</td><td>${data.shape}</td><td>${data.category}</td>`;
+            });
+            
+            if (dataPointsVisible) {
+                updateChartData();
+            }
+            
+            document.getElementById('pathDetails').innerHTML = '点击"构建决策树"开始分析';
+            document.getElementById('predictionResult').innerHTML = '输入水果特征，点击"预测种类"查看结果';
+            
+            const container = d3.select("#treeContainer");
+            container.selectAll("*").remove();
+        }
+        
+        function generateRandomData() {
+            const categories = ['苹果', '橙子', '香蕉'];
+            const colors = ['红色', '绿色', '橙色', '黄色'];
+            const shapes = ['圆形', '椭圆形', '长形'];
+            
+            fruitData = [];
+            for (let i = 0; i < 9; i++) {
+                const category = categories[Math.floor(Math.random() * categories.length)];
+                let weight, color, shape;
+                
+                switch (category) {
+                    case '苹果':
+                        weight = 140 + Math.random() * 60;
+                        color = Math.random() > 0.5 ? '红色' : '绿色';
+                        shape = '圆形';
+                        break;
+                    case '橙子':
+                        weight = 180 + Math.random() * 60;
+                        color = '橙色';
+                        shape = '圆形';
+                        break;
+                    case '香蕉':
+                        weight = 100 + Math.random() * 60;
+                        color = '黄色';
+                        shape = '长形';
+                        break;
+                }
+                
+                fruitData.push({
+                    weight: Math.round(weight),
+                    color: color,
+                    shape: shape,
+                    category: category
+                });
+            }
+            
+            // 重置决策树状态
+            decisionTree = null;
+            
+            // 更新表格
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+            fruitData.forEach((data, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>水果${index+1}</td><td>${data.weight}</td><td>${data.color}</td><td>${data.shape}</td><td>${data.category}</td>`;
+            });
+            
+            // 更新图表
+            if (dataPointsVisible) {
+                updateChartData();
+            }
+            
+            // 更新决策树提示
+            document.getElementById('pathDetails').innerHTML = '点击"构建决策树"重新分析';
+            document.getElementById('predictionResult').innerHTML = '输入水果特征，点击"预测种类"查看结果';
+        }
+        
+        // 初始化
+        window.onload = function() {
+            initChart();
+        };
+    </script>
+</body>
+</html>
