@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>初中生多元线性回归学习工具</title>
+    <title>多元线性回归学习工具</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -227,7 +227,7 @@
                     <button onclick="makePrediction()" style="margin: 5px 0;">预测房价</button>
                 </div>
                 
-                <div id="predictionResult" class="prediction-result" style="margin: 10px 0;"></div>
+                <div id="predictionResult" class="prediction-result" style="margin: 10px 0;">请输入面积和卧室数，然后点击"预测房价"按钮</div>
                 
                 
             </div>
@@ -289,10 +289,25 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf8f9fa);
             
-            // 创建相机 - 调整视角以更好地观察坐标系
+            // 创建相机 - 调整视角以更好地观察坐标系和回归平面
             camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(150, 120, 150);
-            camera.lookAt(50, 50, 50);
+            
+            // 获取数据范围来调整相机位置
+            const areas = houseData.map(d => d.area);
+            const prices = houseData.map(d => d.price);
+            const roomDataArray = houseData.map(d => d.rooms);
+            
+            const maxArea = Math.max(...areas);
+            const maxPrice = Math.max(...prices);
+            const maxRooms = Math.max(...roomDataArray);
+            
+            // 根据数据范围调整相机位置
+            const centerX = maxArea / 2;
+            const centerY = maxPrice / 2;
+            const centerZ = maxRooms / 2;
+            
+            camera.position.set(centerX + 50, centerY + 50, centerZ + 50);
+            camera.lookAt(centerX, centerY, centerZ);
             
             // 创建渲染器
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -303,14 +318,15 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.25;
-            controls.target.set(50, 50, 50); // 设置控制中心点
+            controls.target.set(centerX, centerY, centerZ); // 设置控制中心点
             
             // 创建自定义坐标系
             createCustomAxes();
             
-            // 添加网格 - 在XZ平面上
-            const gridHelper = new THREE.GridHelper(100, 20, 0xcccccc, 0xcccccc);
-            gridHelper.position.set(50, 0, 50);
+            // 添加网格 - 在XZ平面上，根据数据范围调整大小
+            const gridSize = Math.max(maxArea, maxPrice, maxRooms * 10) + 20;
+            const gridHelper = new THREE.GridHelper(gridSize, 20, 0xcccccc, 0xcccccc);
+            gridHelper.position.set(centerX, 0, centerZ);
             scene.add(gridHelper);
             
             // 添加坐标轴标签和刻度
@@ -330,44 +346,50 @@
         }
         
         function createCustomAxes() {
-            // 创建自定义坐标系 - 左下角为原点
+            // 创建自定义坐标系 - 左下角为原点，使用原始数据值
             const axesGroup = new THREE.Group();
             
-            // X轴（面积）- 红色，向右
+            // 获取数据范围
+            const areas = houseData.map(d => d.area);
+            const prices = houseData.map(d => d.price);
+            const roomDataArray = houseData.map(d => d.rooms);
+            
+            const maxArea = Math.max(...areas);
+            const maxPrice = Math.max(...prices);
+            const maxRooms = Math.max(...roomDataArray);
+            
+            // X轴（面积）- 红色，向右，使用原始面积值
             const xAxisGeometry = new THREE.BufferGeometry().setFromPoints([
                 new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(100, 0, 0)
+                new THREE.Vector3(maxArea + 20, 0, 0)
             ]);
             const xAxisMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 });
             const xAxis = new THREE.Line(xAxisGeometry, xAxisMaterial);
             axesGroup.add(xAxis);
             
-            // Y轴（价格）- 绿色，向上
+            // Y轴（价格）- 绿色，向上，使用原始价格值
             const yAxisGeometry = new THREE.BufferGeometry().setFromPoints([
                 new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(0, 100, 0)
+                new THREE.Vector3(0, maxPrice + 50, 0)
             ]);
             const yAxisMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 3 });
             const yAxis = new THREE.Line(yAxisGeometry, yAxisMaterial);
             axesGroup.add(yAxis);
             
-            // Z轴（卧室数）- 蓝色，向内
+            // Z轴（卧室数）- 蓝色，向内，使用原始卧室数值的50倍（调整比例）
             const zAxisGeometry = new THREE.BufferGeometry().setFromPoints([
                 new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(0, 0, 100)
+                new THREE.Vector3(0, 0, (maxRooms + 1) * 50)
             ]);
             const zAxisMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 3 });
             const zAxis = new THREE.Line(zAxisGeometry, zAxisMaterial);
             axesGroup.add(zAxis);
             
-            // 添加刻度标记
-            for (let i = 0; i <= 10; i++) {
-                const x = i * 10;
-                const y = i * 10;
-                const z = i * 10;
-                
-                // X轴刻度
-                if (i > 0) {
+            // 添加刻度标记 - 使用实际数据值
+            // X轴刻度（面积）
+            for (let i = 0; i <= Math.ceil(maxArea / 20); i++) {
+                const x = i * 20;
+                if (x <= maxArea + 20) {
                     const xTickGeometry = new THREE.BufferGeometry().setFromPoints([
                         new THREE.Vector3(x, -2, 0),
                         new THREE.Vector3(x, 2, 0)
@@ -375,9 +397,12 @@
                     const xTick = new THREE.Line(xTickGeometry, new THREE.LineBasicMaterial({ color: 0xff0000 }));
                     axesGroup.add(xTick);
                 }
-                
-                // Y轴刻度
-                if (i > 0) {
+            }
+            
+            // Y轴刻度（价格）
+            for (let i = 0; i <= Math.ceil(maxPrice / 50); i++) {
+                const y = i * 50;
+                if (y <= maxPrice + 50) {
                     const yTickGeometry = new THREE.BufferGeometry().setFromPoints([
                         new THREE.Vector3(-2, y, 0),
                         new THREE.Vector3(2, y, 0)
@@ -385,16 +410,17 @@
                     const yTick = new THREE.Line(yTickGeometry, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
                     axesGroup.add(yTick);
                 }
-                
-                // Z轴刻度
-                if (i > 0) {
-                    const zTickGeometry = new THREE.BufferGeometry().setFromPoints([
-                        new THREE.Vector3(0, -2, z),
-                        new THREE.Vector3(0, 2, z)
-                    ]);
-                    const zTick = new THREE.Line(zTickGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff }));
-                    axesGroup.add(zTick);
-                }
+            }
+            
+            // Z轴刻度（卧室数）- 放大50倍
+            for (let i = 0; i <= maxRooms + 1; i++) {
+                const z = i * 50;
+                const zTickGeometry = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, -2, z),
+                    new THREE.Vector3(0, 2, z)
+                ]);
+                const zTick = new THREE.Line(zTickGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff }));
+                axesGroup.add(zTick);
             }
             
             scene.add(axesGroup);
@@ -443,36 +469,53 @@
                 return sprite;
             }
             
+            // 获取数据范围
+            const areas = houseData.map(d => d.area);
+            const prices = houseData.map(d => d.price);
+            const roomDataArray = houseData.map(d => d.rooms);
+            
+            const maxArea = Math.max(...areas);
+            const maxPrice = Math.max(...prices);
+            const maxRooms = Math.max(...roomDataArray);
+            
             // 主坐标轴标签
             const xLabel = createTextSprite('面积 (m²)', '#ff0000');
-            xLabel.position.set(50, -8, 0);
+            xLabel.position.set(maxArea / 2, -8, 0);
             scene.add(xLabel);
             
             const yLabel = createTextSprite('价格 (万元)', '#00ff00');
-            yLabel.position.set(-8, 50, 0);
+            yLabel.position.set(-8, maxPrice / 2, 0);
             scene.add(yLabel);
             
             const zLabel = createTextSprite('卧室数', '#0000ff');
-            zLabel.position.set(0, -8, 50);
+            zLabel.position.set(0, -8, (maxRooms / 2) * 50);
             scene.add(zLabel);
             
-            // 添加刻度标签
-            for (let i = 1; i <= 10; i++) {
-                const value = i * 10;
-                
-                // X轴刻度标签（面积）
-                const xTickLabel = createTickLabel(value.toString(), '#ff0000');
-                xTickLabel.position.set(value, -5, 0);
-                scene.add(xTickLabel);
-                
-                // Y轴刻度标签（价格）
-                const yTickLabel = createTickLabel(value.toString(), '#00ff00');
-                yTickLabel.position.set(-5, value, 0);
-                scene.add(yTickLabel);
-                
-                // Z轴刻度标签（卧室数）
-                const zTickLabel = createTickLabel(value.toString(), '#0000ff');
-                zTickLabel.position.set(0, -5, value);
+            // 添加刻度标签 - 使用实际数据值
+            // X轴刻度标签（面积）
+            for (let i = 0; i <= Math.ceil(maxArea / 20); i++) {
+                const value = i * 20;
+                if (value <= maxArea + 20) {
+                    const xTickLabel = createTickLabel(value.toString(), '#ff0000');
+                    xTickLabel.position.set(value, -5, 0);
+                    scene.add(xTickLabel);
+                }
+            }
+            
+            // Y轴刻度标签（价格）
+            for (let i = 0; i <= Math.ceil(maxPrice / 50); i++) {
+                const value = i * 50;
+                if (value <= maxPrice + 50) {
+                    const yTickLabel = createTickLabel(value.toString(), '#00ff00');
+                    yTickLabel.position.set(-5, value, 0);
+                    scene.add(yTickLabel);
+                }
+            }
+            
+            // Z轴刻度标签（卧室数）- 放大50倍
+            for (let i = 0; i <= maxRooms + 1; i++) {
+                const zTickLabel = createTickLabel(i.toString(), '#0000ff');
+                zTickLabel.position.set(0, -5, i * 50);
                 scene.add(zTickLabel);
             }
         }
@@ -480,7 +523,7 @@
         function createLegend() {
             // 创建图例HTML元素
             const legendHTML = `
-                <div style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 12px; z-index: 100; max-width: 250px;">
+                <div style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 12px; z-index: 100; max-width: 280px;">
                     <h4 style="margin: 0 0 10px 0; color: #333;">📊 3D坐标系说明</h4>
                     <div style="margin: 5px 0;">
                         <span style="display: inline-block; width: 12px; height: 12px; background: #ff0000; border-radius: 50%; margin-right: 8px;"></span>
@@ -488,18 +531,22 @@
                     </div>
                     <div style="margin: 5px 0;">
                         <span style="display: inline-block; width: 12px; height: 12px; background: rgba(33, 150, 243, 0.4); margin-right: 8px;"></span>
-                        <span>蓝色平面 = 回归预测模型</span>
+                        <span>蓝色平面 = 多元回归预测模型</span>
+                    </div>
+                    <div style="margin: 5px 0;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #00ff00; border-radius: 50%; margin-right: 8px;"></span>
+                        <span>绿色圆点 = 预测房价</span>
                     </div>
                     <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
                     <div style="margin: 5px 0;"><strong>坐标系（左下角为原点）：</strong></div>
-                    <div style="margin: 3px 0; color: #ff0000;">📏 X轴（红色）：向右 = 面积增加</div>
-                    <div style="margin: 3px 0; color: #00ff00;">💰 Y轴（绿色）：向上 = 价格增加</div>
-                    <div style="margin: 3px 0; color: #0000ff;">🏠 Z轴（蓝色）：向内 = 卧室数增加</div>
+                    <div style="margin: 3px 0; color: #ff0000;">📏 X轴（红色）：向右 = 面积增加 (70-150m²)</div>
+                    <div style="margin: 3px 0; color: #00ff00;">💰 Y轴（绿色）：向上 = 价格增加 (180-450万元)</div>
+                    <div style="margin: 3px 0; color: #0000ff;">🏠 Z轴（蓝色）：向内 = 卧室数增加 (2-4间)</div>
                     <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
-                    <div style="margin: 5px 0;"><strong>刻度说明：</strong></div>
-                    <div style="margin: 3px 0;">面积：0-100m²（X轴刻度0-100）</div>
-                    <div style="margin: 3px 0;">价格：0-500万元（Y轴刻度0-100，映射关系：价格/5）</div>
-                    <div style="margin: 3px 0;">卧室：1-5间（Z轴刻度20-100，映射关系：卧室数×20）</div>
+                    <div style="margin: 5px 0;"><strong>坐标映射：</strong></div>
+                    <div style="margin: 3px 0;">面积：直接使用原始值 (m²)</div>
+                    <div style="margin: 3px 0;">价格：直接使用原始值 (万元)</div>
+                    <div style="margin: 3px 0;">卧室数：原始值×50 (间)</div>
                     <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
                     <div style="margin: 5px 0; color: #666;">
                         💡 <em>鼠标拖拽旋转视角，滚轮缩放</em>
@@ -540,7 +587,7 @@
             scatterPoints.forEach(point => scene.remove(point));
             scatterPoints = [];
             
-            // 添加新的数据点，使用新的坐标系
+            // 添加新的数据点，直接使用原始数据值
             houseData.forEach((house, index) => {
                 const geometry = new THREE.SphereGeometry(2, 16, 16);
                 const material = new THREE.MeshPhongMaterial({ 
@@ -549,19 +596,16 @@
                 });
                 const sphere = new THREE.Mesh(geometry, material);
                 
-                // 新的坐标映射（左下角为原点）：
-                // X轴：面积（向右，0-100）
-                // Y轴：价格（向上，0-100）
-                // Z轴：卧室数（向内，0-100）
+                // 直接使用原始数据值，不进行映射
                 sphere.position.set(
-                    house.area,  // 面积直接映射到X轴
-                    house.price / 5,  // 价格除以5映射到Y轴（0-500万映射到0-100）
-                    house.rooms * 20  // 卧室数乘以20映射到Z轴（1-5间映射到20-100）
+                    house.area,      // 面积直接使用原始值
+                    house.price,     // 价格直接使用原始值
+                    house.rooms * 50 // 卧室数放大50倍
                 );
                 
                 // 添加数据标签（简化显示）
                 const label = createDataLabel(`${house.name}\n${house.area}m², ${house.price}万`);
-                label.position.set(house.area + 3, house.price / 5, house.rooms * 20);
+                label.position.set(house.area + 3, house.price, house.rooms * 50);
                 scene.add(label);
                 
                 scene.add(sphere);
@@ -619,96 +663,7 @@
             }
         }
         
-        function showRegressionPlane(coeffs) {
-            if (!scene) return;
-            
-            // 移除旧的回归平面
-            const oldPlane = scene.getObjectByName('regressionPlane');
-            if (oldPlane) scene.remove(oldPlane);
-            const oldEdges = scene.getObjectByName('regressionPlaneEdges');
-            if (oldEdges) scene.remove(oldEdges);
-            
-            // 获取实际数据范围
-            const areas = houseData.map(d => d.area);
-            const rooms = houseData.map(d => d.rooms);
-            const prices = houseData.map(d => d.price);
-            
-            const minArea = Math.min(...areas);
-            const maxArea = Math.max(...areas);
-            const minRooms = Math.min(...rooms);
-            const maxRooms = Math.max(...rooms);
-            
-            // 创建回归平面 - 使用与数据点相同的坐标系映射
-            const planeWidth = maxArea - minArea;
-            const planeDepth = (maxRooms - minRooms) * 20;
-            const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeDepth, 20, 20);
-            
-            // 计算平面4个角点在3D坐标系中的Y坐标（价格）
-            const cornerPrices = [
-                (coeffs.a1 * minArea + coeffs.a2 * minRooms + coeffs.b) / 5,  // 映射到Y轴
-                (coeffs.a1 * maxArea + coeffs.a2 * minRooms + coeffs.b) / 5,
-                (coeffs.a1 * maxArea + coeffs.a2 * maxRooms + coeffs.b) / 5,
-                (coeffs.a1 * minArea + coeffs.a2 * maxRooms + coeffs.b) / 5
-            ];
-            
-            // 计算平均高度
-            const avgPrice = (cornerPrices.reduce((a, b) => a + b, 0) / 4);
-            
-            // 创建平面材质
-            const planeMaterial = new THREE.MeshBasicMaterial({
-                color: 0x2196F3,
-                transparent: true,
-                opacity: 0.4,
-                side: THREE.DoubleSide
-            });
-            
-            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-            plane.name = 'regressionPlane';
-            
-            // 设置平面位置 - 使用与数据点相同的坐标系
-            plane.position.set(
-                (minArea + maxArea) / 2,  // X轴：面积中心
-                avgPrice,  // Y轴：平均价格（已映射）
-                ((minRooms + maxRooms) / 2) * 20  // Z轴：卧室数中心（已映射）
-            );
-            
-            // 根据回归系数计算正确的倾斜角度
-            // 注意：在3D坐标系中，我们需要考虑映射关系
-            const slopeX = coeffs.a1 / 5;  // 面积对价格的影响（已映射）
-            const slopeZ = coeffs.a2 * 20 / 5;  // 卧室数对价格的影响（已映射）
-            
-            // 设置正确的旋转角度
-            plane.rotation.x = -Math.atan(slopeZ); // Z轴方向的倾斜
-            plane.rotation.z = Math.atan(slopeX); // X轴方向的倾斜
-            
-            scene.add(plane);
-            
-            // 添加边框
-            const edgesGeometry = new THREE.EdgesGeometry(planeGeometry);
-            const edgesMaterial = new THREE.LineBasicMaterial({ 
-                color: 0x1976D2, 
-                linewidth: 2 
-            });
-            const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-            edges.position.copy(plane.position);
-            edges.rotation.copy(plane.rotation);
-            edges.name = 'regressionPlaneEdges';
-            scene.add(edges);
-            
-            // 添加调试信息
-            console.log('回归系数:', coeffs);
-            console.log('数据范围:', {minArea, maxArea, minRooms, maxRooms});
-            console.log('平面位置:', plane.position);
-            console.log('平面旋转:', {x: plane.rotation.x, z: plane.rotation.z});
-            
-            // 验证回归模型
-            console.log('=== 回归模型验证 ===');
-            houseData.forEach((house, index) => {
-                const predictedPrice = coeffs.a1 * house.area + coeffs.a2 * house.rooms + coeffs.b;
-                const error = house.price - predictedPrice;
-                console.log(`数据点${index + 1}: 实际${house.price}万, 预测${predictedPrice.toFixed(1)}万, 误差${error.toFixed(1)}万`);
-            });
-        }
+
 
         function calculateMultipleRegression() {
             // 二元线性回归计算（面积和卧室数）
@@ -780,53 +735,193 @@
 
         
         function makePrediction() {
+            console.log('=== 开始预测 ===');
+            console.log('模型是否已计算:', modelCalculated);
+            
             if (!modelCalculated) {
-                alert('请先点击"计算多元回归模型"按钮！');
-                return;
+                console.log('⚠️ 模型未计算，尝试自动计算模型...');
+                // 尝试自动计算模型
+                try {
+                    const coeffs = calculateMultipleRegression();
+                    if (coeffs && coeffs.a1 !== undefined) {
+                        console.log('✅ 自动计算模型成功');
+                        modelCalculated = true;
+                    } else {
+                        alert('请先点击"计算多元回归模型"按钮！');
+                        return;
+                    }
+                } catch (error) {
+                    console.log('❌ 自动计算模型失败:', error);
+                    alert('请先点击"计算多元回归模型"按钮！');
+                    return;
+                }
             }
             
             const area = parseFloat(document.getElementById('predArea').value);
             const rooms = parseFloat(document.getElementById('predRooms').value);
+            
+            console.log('输入参数:', {area, rooms});
             
             if (isNaN(area) || isNaN(rooms)) {
                 alert('请输入面积和卧室数！');
                 return;
             }
             
+            // 清除之前的预测点
+            if (scene) {
+                const oldPredictionPoints = scene.children.filter(obj => 
+                    obj.material && obj.material.color && obj.material.color.getHexString() === '00ff00'
+                );
+                oldPredictionPoints.forEach(point => scene.remove(point));
+                
+                // 清除预测点标签
+                const oldPredictionLabels = scene.children.filter(obj => 
+                    obj.type === 'Sprite' && obj.userData && obj.userData.isPrediction
+                );
+                oldPredictionLabels.forEach(label => scene.remove(label));
+                
+                // 清除预测点辅助线
+                const oldPredictionHelpers = scene.children.filter(obj => 
+                    obj.userData && obj.userData.isPrediction && obj.type === 'Line'
+                );
+                oldPredictionHelpers.forEach(helper => scene.remove(helper));
+            }
+            
             // 使用二元回归系数进行预测
             const coeffs = calculateMultipleRegression();
             const predictedPrice = coeffs.a1 * area + coeffs.a2 * rooms + coeffs.b;
             
+
+            
             // 在3D场景中显示预测点
-            const predictionGeometry = new THREE.SphereGeometry(3, 16, 16);
+            const predictionGeometry = new THREE.SphereGeometry(2, 16, 16); // 减小预测点大小
             const predictionMaterial = new THREE.MeshPhongMaterial({ 
                 color: 0x00ff00,
-                emissive: 0x003300
+                emissive: 0x003300,
+                transparent: true,
+                opacity: 0.8 // 增加透明度
             });
             const predictionSphere = new THREE.Mesh(predictionGeometry, predictionMaterial);
             
-            // 使用与数据点相同的坐标系映射
-            predictionSphere.position.set(
-                area,  // 面积
-                predictedPrice / 5,  // 价格除以5（与数据点一致）
-                rooms * 20  // 卧室数乘以20（与数据点一致）
-            );
+            // 直接使用原始数据值，不进行映射
+            const predictionX = area;           // 面积直接使用原始值
+            const predictionY = predictedPrice; // 价格直接使用原始值
+            const predictionZ = rooms * 50;     // 卧室数放大50倍
+            
+            predictionSphere.position.set(predictionX, predictionY, predictionZ);
             
             // 添加预测点标签
             const predictionLabel = createDataLabel(`预测\n${area}m², ${predictedPrice.toFixed(1)}万`);
-            predictionLabel.position.set(area + 3, predictedPrice / 5, rooms * 20);
+            predictionLabel.position.set(predictionX + 5, predictionY, predictionZ);
+            predictionLabel.userData = { isPrediction: true }; // 添加标识
             scene.add(predictionLabel);
             scene.add(predictionSphere);
             
+            // 添加辅助线，从预测点垂直向下到平面
+            const helperLineGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(predictionX, predictionY, predictionZ),
+                new THREE.Vector3(predictionX, predictionY - 10, predictionZ) // 向下延伸10个单位
+            ]);
+            const helperLineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x00ff00, 
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.6
+            });
+            const helperLine = new THREE.Line(helperLineGeometry, helperLineMaterial);
+            helperLine.userData = { isPrediction: true };
+            scene.add(helperLine);
+            
             // 添加调试信息
-            console.log('预测点位置:', predictionSphere.position);
+            console.log('=== 预测点信息 ===');
+            console.log('预测点位置:', {x: predictionX, y: predictionY, z: predictionZ});
             console.log('预测结果:', {area, rooms, predictedPrice});
+            
+            // 验证预测点是否在回归平面上
+            // 使用与平面相同的数学原理
+            const expectedY = coeffs.a1 * area + coeffs.a2 * rooms + coeffs.b;
+            const deviation = Math.abs(predictionY - expectedY);
+            
+            // 验证数学计算
+            console.log('=== 数学验证 ===');
+            console.log('回归方程: 价格 =', coeffs.a1, '×', area, '+', coeffs.a2, '×', rooms, '+', coeffs.b);
+            console.log('预测价格:', predictedPrice);
+            console.log('3D坐标系映射:');
+            console.log('- X轴 (面积):', area);
+            console.log('- Y轴 (价格):', predictedPrice);
+            console.log('- Z轴 (卧室数):', rooms * 50);
+            
+            console.log('预测点验证:');
+            console.log('- 预测点坐标:', {x: predictionX, y: predictionY, z: predictionZ});
+            console.log('- 回归平面在该点的Y值:', expectedY);
+            console.log('- 偏差:', deviation);
+            console.log('- 预测点是否在平面上:', deviation < 0.1 ? '是' : '否');
+            
+            // 验证预测点是否在平面覆盖范围内
+            const roomDataArray = houseData.map(d => d.rooms);
+            const minRooms = Math.min(...roomDataArray);
+            const maxRooms = Math.max(...roomDataArray);
+            
+            const planeCenterZ = (minRooms + maxRooms) / 2 * 50; // 平面中心Z坐标，放大50倍
+            const planeDepth = (maxRooms - minRooms) * 150; // 平面深度，对应Z轴放大50倍
+            const inPlaneRange = predictionZ >= planeCenterZ - planeDepth/2 && predictionZ <= planeCenterZ + planeDepth/2;
+            console.log('- 预测点是否在平面覆盖范围内:', inPlaneRange ? '是' : '否');
+            console.log('- 平面Z轴范围:', {min: planeCenterZ - planeDepth/2, max: planeCenterZ + planeDepth/2});
+            console.log('- 预测点Z坐标:', predictionZ);
+            console.log('- 平面中心Z坐标:', planeCenterZ);
+            console.log('- 平面深度:', planeDepth);
+            
+            if (deviation > 0.1) {
+                console.log('⚠️ 警告：预测点偏离回归平面，可能需要检查平面计算');
+            }
+            if (!inPlaneRange) {
+                console.log('⚠️ 警告：预测点超出平面覆盖范围，可能看不到平面');
+            }
+            
+            // 精确验证预测点是否在平面上
+            console.log('=== 精确平面验证 ===');
+            
+            // 获取平面信息
+            const plane = scene.getObjectByName('regressionPlane');
+            if (plane) {
+                const planeCenterX = plane.position.x;
+                const planeCenterY = plane.position.y;
+                const planeCenterZ = plane.position.z;
+                
+                // 计算预测点在平面坐标系中的位置
+                const relativeX = predictionX - planeCenterX;
+                const relativeY = predictionY - planeCenterY;
+                const relativeZ = predictionZ - planeCenterZ;
+                
+                // 根据平面旋转计算预测点应该在的Y坐标
+                const expectedYOnPlane = planeCenterY + 
+                    relativeX * Math.tan(plane.rotation.z) + 
+                    relativeZ * Math.tan(plane.rotation.x);
+                
+                const planeDeviation = Math.abs(predictionY - expectedYOnPlane);
+                console.log('平面几何验证:');
+                console.log('- 平面中心位置:', {x: planeCenterX, y: planeCenterY, z: planeCenterZ});
+                console.log('- 预测点相对平面中心:', {x: relativeX, y: relativeY, z: relativeZ});
+                console.log('- 平面旋转角度:', {x: plane.rotation.x, z: plane.rotation.z});
+                console.log('- 预测点Y坐标:', predictionY);
+                console.log('- 平面上对应Y坐标:', expectedYOnPlane);
+                console.log('- 几何偏差:', planeDeviation);
+                console.log('- 预测点是否在几何平面上:', planeDeviation < 0.1 ? '是' : '否');
+            } else {
+                console.log('⚠️ 警告：找不到回归平面，无法进行几何验证');
+            }
             
             // 显示预测结果
             const predictionDiv = document.getElementById('predictionResult');
+            console.log('=== 预测结果显示 ===');
+            console.log('预测结果区域:', predictionDiv);
             if (predictionDiv) {
-                predictionDiv.innerHTML = 
-                    `🎯 预测结果：这套房子的价格大约是${predictedPrice.toFixed(1)}万元`;
+                const resultText = `🎯 预测结果：这套房子的价格大约是${predictedPrice.toFixed(1)}万元`;
+                predictionDiv.innerHTML = resultText;
+                console.log('设置预测结果文本:', resultText);
+                console.log('预测结果区域内容:', predictionDiv.innerHTML);
+            } else {
+                console.log('⚠️ 警告：找不到预测结果区域');
             }
         }
 
@@ -860,6 +955,18 @@
                 // 清除回归平面边框
                 const regressionPlaneEdges = scene.getObjectByName('regressionPlaneEdges');
                 if (regressionPlaneEdges) scene.remove(regressionPlaneEdges);
+                
+                // 清除预测点
+                const predictionPoints = scene.children.filter(obj => 
+                    obj.material && obj.material.color && obj.material.color.getHexString() === '00ff00'
+                );
+                predictionPoints.forEach(point => scene.remove(point));
+                
+                // 清除预测点辅助线
+                const predictionHelpers = scene.children.filter(obj => 
+                    obj.userData && obj.userData.isPrediction && obj.type === 'Line'
+                );
+                predictionHelpers.forEach(helper => scene.remove(helper));
                 
                 // 清除所有标签（通过类型过滤）
                 const labels = scene.children.filter(obj => obj.type === 'Sprite');
@@ -912,6 +1019,18 @@
                 const regressionPlaneEdges = scene.getObjectByName('regressionPlaneEdges');
                 if (regressionPlaneEdges) scene.remove(regressionPlaneEdges);
                 
+                // 清除预测点
+                const predictionPoints = scene.children.filter(obj => 
+                    obj.material && obj.material.color && obj.material.color.getHexString() === '00ff00'
+                );
+                predictionPoints.forEach(point => scene.remove(point));
+                
+                // 清除预测点辅助线
+                const predictionHelpers = scene.children.filter(obj => 
+                    obj.userData && obj.userData.isPrediction && obj.type === 'Line'
+                );
+                predictionHelpers.forEach(helper => scene.remove(helper));
+                
                 // 清除所有标签（通过类型过滤）
                 const labels = scene.children.filter(obj => obj.type === 'Sprite');
                 labels.forEach(label => scene.remove(label));
@@ -934,10 +1053,26 @@
             houseData = [];
             const names = ['房子G', '房子H', '房子I', '房子J', '房子K', '房子L'];
             
+            // 生成更多样化的随机数据
+            console.log('=== 生成随机数据 ===');
+            
+            // 为整个数据集选择一组固定的系数，确保数据的一致性
+            const areaCoeff = (Math.random() * 3) + 2; // 2-5，面积对价格的正向影响
+            const roomCoeff = (Math.random() * 40) + 20; // 20-60，卧室数对价格的正向影响
+            const basePrice = (Math.random() * 150) + 100; // 100-250，基础价格
+            
+            console.log(`使用系数: 面积${areaCoeff.toFixed(1)}, 卧室${roomCoeff.toFixed(1)}, 基础价格${basePrice.toFixed(1)}`);
+            
             for (let i = 0; i < 6; i++) {
                 const area = Math.floor(Math.random() * 100) + 60; // 60-160
                 const rooms = Math.floor(Math.random() * 3) + 2; // 2-4
-                const price = Math.floor(area * 2.5 + rooms * 30 + Math.random() * 50 + 50);
+                
+                // 添加随机噪声，但保持正系数
+                const noise = (Math.random() - 0.5) * 80; // -40到40的随机噪声
+                
+                const price = Math.floor(area * areaCoeff + rooms * roomCoeff + basePrice + noise);
+                
+                console.log(`房子${names[i]}: 面积${area}m², 卧室${rooms}间, 价格${price}万`);
                 
                 houseData.push({area, rooms, price, name: names[i]});
             }
@@ -963,6 +1098,18 @@
                 // 清除回归平面边框
                 const regressionPlaneEdges = scene.getObjectByName('regressionPlaneEdges');
                 if (regressionPlaneEdges) scene.remove(regressionPlaneEdges);
+                
+                // 清除预测点
+                const predictionPoints = scene.children.filter(obj => 
+                    obj.material && obj.material.color && obj.material.color.getHexString() === '00ff00'
+                );
+                predictionPoints.forEach(point => scene.remove(point));
+                
+                // 清除预测点辅助线
+                const predictionHelpers = scene.children.filter(obj => 
+                    obj.userData && obj.userData.isPrediction && obj.type === 'Line'
+                );
+                predictionHelpers.forEach(helper => scene.remove(helper));
                 
                 // 清除所有标签（通过类型过滤）
                 const labels = scene.children.filter(obj => obj.type === 'Sprite');
@@ -992,72 +1139,94 @@
             
             // 获取实际数据范围
             const areas = houseData.map(d => d.area);
-            const rooms = houseData.map(d => d.rooms);
+            const roomDataArray = houseData.map(d => d.rooms);
             const prices = houseData.map(d => d.price);
             
-            const minArea = Math.min(...areas) - 10;
-            const maxArea = Math.max(...areas) + 10;
-            const minRooms = Math.min(...rooms) - 0.5;
-            const maxRooms = Math.max(...rooms) + 0.5;
-            const minPrice = Math.min(...prices) - 20;
-            const maxPrice = Math.max(...prices) + 20;
+            const minArea = Math.min(...areas);
+            const maxArea = Math.max(...areas);
+            const minRooms = Math.min(...roomDataArray);
+            const maxRooms = Math.max(...roomDataArray);
             
-            // 重新映射坐标系：
-            // X轴：面积（左右方向）
-            // Y轴：价格（上下方向）  
-            // Z轴：卧室数（前后方向）
+            // 平面尺寸：使用实际数据范围，大幅扩大
+            const areaRange = maxArea - minArea;
+            const roomRange = maxRooms - minRooms;
             
-            // 计算实际数据在3D空间中的中心点
-            const centerX = (minArea + maxArea) / 2 - 100; // 减去100是之前的偏移
-            const centerY = (minPrice + maxPrice) / 2 - 300; // 减去300是之前的偏移
-            const centerZ = ((minRooms + maxRooms) / 2) * 20 - 60; // 乘以20是之前的缩放
+            const planeWidth = areaRange * 3;   // 扩大3倍
+            const planeDepth = roomRange * 150; // 扩大150倍（对应Z轴放大50倍）
             
-            // 创建足够大的平面 - 使用实际3D坐标系中的尺寸
-            const planeWidth = maxArea - minArea;  // X轴方向的宽度
-            const planeDepth = (maxRooms - minRooms) * 20;  // Z轴方向的深度（考虑缩放因子）
-            const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeDepth, 20, 20);
+            console.log('=== 平面尺寸计算 ===');
+            console.log('数据范围:', {minArea, maxArea, minRooms, maxRooms});
+            console.log('平面尺寸:', {width: planeWidth, depth: planeDepth});
             
-            // 计算平面4个角点的实际价格
-            const cornerPrices = [
-                coeffs.a1 * minArea + coeffs.a2 * minRooms + coeffs.b,
-                coeffs.a1 * maxArea + coeffs.a2 * minRooms + coeffs.b,
-                coeffs.a1 * maxArea + coeffs.a2 * maxRooms + coeffs.b,
-                coeffs.a1 * minArea + coeffs.a2 * maxRooms + coeffs.b
-            ];
+            const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeDepth, 32, 32);
             
-            // 计算平均高度
-            const avgPrice = (cornerPrices.reduce((a, b) => a + b, 0) / 4);
-            
-            // 创建平面材质
+            // 创建平面材质 - 增加透明度，让数据点更清晰
             const planeMaterial = new THREE.MeshBasicMaterial({
                 color: 0x2196F3,
                 transparent: true,
-                opacity: 0.4,
+                opacity: 0.3,
                 side: THREE.DoubleSide
             });
             
             const plane = new THREE.Mesh(planeGeometry, planeMaterial);
             plane.name = 'regressionPlane';
             
-            // 设置平面位置 - 使用与数据点相同的坐标系
-            plane.position.set(
-                (minArea + maxArea) / 2 - 100,
-                avgPrice - 300,
-                ((minRooms + maxRooms) / 2) * 20 - 60
-            );
+            // 计算平面中心位置 - 使用数据范围的中心，Z轴放大50倍
+            const centerX = (minArea + maxArea) / 2;
+            const centerZ = (minRooms + maxRooms) / 2 * 50; // Z轴放大50倍
             
-            // 根据回归系数计算正确的倾斜角度
-            // 计算平面的法向量方向
-            const slopeX = coeffs.a1; // 面积系数
-            const slopeZ = coeffs.a2; // 卧室系数
+            // 根据回归方程计算中心点的Y坐标
+            const centerY = coeffs.a1 * centerX + coeffs.a2 * (centerZ / 50) + coeffs.b; // 注意这里要除以50，因为Z轴放大了50倍
             
-            // 设置正确的旋转角度
-            plane.rotation.x = -Math.atan(slopeZ / 20); // Z轴方向的倾斜
-            plane.rotation.z = Math.atan(slopeX); // X轴方向的倾斜
+            plane.position.set(centerX, centerY, centerZ);
+            
+            // 计算3D坐标系中的斜率
+            // 回归方程：price = a1*area + a2*rooms + b
+            // 在3D坐标系中：X轴=面积，Y轴=价格，Z轴=卧室数*50
+            // 所以：Y = a1*X + a2*(Z/50) + b
+            // 对X求偏导：∂Y/∂X = a1
+            // 对Z求偏导：∂Y/∂Z = a2/50
+            const slopeX = coeffs.a1;  // X轴斜率（面积影响）
+            const slopeZ = coeffs.a2 / 50;  // Z轴斜率（卧室影响，因为Z轴放大了50倍）
+            
+            console.log('3D坐标系斜率 (Z轴放大50倍):');
+            console.log('- X轴斜率 (面积影响):', slopeX);
+            console.log('- Z轴斜率 (卧室影响):', slopeZ);
+            console.log('- 回归系数:', {a1: coeffs.a1, a2: coeffs.a2, b: coeffs.b});
+            
+            // 计算旋转角度 - 使用反正切函数
+            const rotationX = Math.atan(slopeZ); // Z轴方向的倾斜
+            const rotationZ = Math.atan(slopeX); // X轴方向的倾斜
+            
+            // 限制旋转角度，避免平面过度倾斜
+            const maxRotation = Math.PI / 6; // 30度，允许更大的倾斜
+            plane.rotation.x = Math.max(-maxRotation, Math.min(maxRotation, rotationX));
+            plane.rotation.z = Math.max(-maxRotation, Math.min(maxRotation, rotationZ));
+            
+            console.log('平面旋转角度:');
+            console.log('- X轴旋转 (面积影响):', plane.rotation.z, '弧度');
+            console.log('- Z轴旋转 (卧室影响):', plane.rotation.x, '弧度');
+            console.log('- 旋转限制: ±30度 (±π/6弧度)');
+            
+            // 验证平面是否正确通过数据点
+            console.log('=== 平面验证 ===');
+            houseData.forEach((house, index) => {
+                const expectedY = coeffs.a1 * house.area + coeffs.a2 * house.rooms + coeffs.b;
+                const actualY = house.price;
+                const deviation = Math.abs(actualY - expectedY);
+                console.log(`数据点${index + 1}: 实际Y=${actualY.toFixed(2)}, 平面Y=${expectedY.toFixed(2)}, 偏差=${deviation.toFixed(2)}`);
+            });
+            
+            // 验证平面覆盖范围
+            console.log('=== 平面覆盖范围验证 ===');
+            console.log('平面中心位置:', {x: centerX, y: centerY, z: centerZ});
+            console.log('平面尺寸:', {width: planeWidth, depth: planeDepth});
+            console.log('Z轴覆盖范围:', {min: centerZ - planeDepth/2, max: centerZ + planeDepth/2});
+            console.log('卧室数覆盖范围:', {min: (centerZ - planeDepth/2)/50, max: (centerZ + planeDepth/2)/50});
             
             scene.add(plane);
             
-            // 添加边框
+            // 添加边框 - 增加边框宽度，让平面更清晰
             const edgesGeometry = new THREE.EdgesGeometry(planeGeometry);
             const edgesMaterial = new THREE.LineBasicMaterial({ 
                 color: 0x1976D2, 
@@ -1069,54 +1238,20 @@
             edges.name = 'regressionPlaneEdges';
             scene.add(edges);
             
-            // 添加坐标轴标签
-            updateAxisLabels(minArea, maxArea, minRooms, maxRooms, minPrice, maxPrice);
+            // 添加调试信息
+            console.log('回归系数:', coeffs);
+            console.log('平面位置:', plane.position);
+            console.log('平面旋转:', {x: plane.rotation.x, z: plane.rotation.z});
+            console.log('斜率:', {slopeX, slopeZ});
+            
+            // 可视化建议
+            console.log('=== 可视化建议 ===');
+            console.log('1. 蓝色平面应该反映面积和卧室数对价格的综合影响');
+            console.log('2. 数据点应该大致分布在平面附近');
+            console.log('3. 平面倾斜方向应该与数据趋势一致');
         }
         
-        function updateAxisLabels(minArea, maxArea, minRooms, maxRooms, minPrice, maxPrice) {
-            // 更新或创建坐标轴标签
-            const existingLabels = scene.children.filter(obj => obj.name && obj.name.includes('axisLabel'));
-            existingLabels.forEach(label => scene.remove(label));
-            
-            // 创建新的坐标轴标签
-            function createTextSprite(text, color = '#000000') {
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.width = 256;
-                canvas.height = 64;
-                
-                context.font = 'Bold 20px Arial';
-                context.fillStyle = color;
-                context.textAlign = 'center';
-                context.textBaseline = 'middle';
-                context.fillText(text, 128, 32);
-                
-                const texture = new THREE.CanvasTexture(canvas);
-                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-                const sprite = new THREE.Sprite(spriteMaterial);
-                sprite.scale.set(30, 7.5, 1);
-                
-                return sprite;
-            }
-            
-            // X轴标签
-            const xLabel = createTextSprite(`面积 (${minArea}-${maxArea}m²)`);
-            xLabel.position.set(maxArea - 100 + 20, -10, 0);
-            xLabel.name = 'axisLabelX';
-            scene.add(xLabel);
-            
-            // Y轴标签
-            const yLabel = createTextSprite(`价格 (${minPrice}-${maxPrice}万元)`);
-            yLabel.position.set(0, maxPrice - 300 + 20, 0);
-            yLabel.name = 'axisLabelY';
-            scene.add(yLabel);
-            
-            // Z轴标签
-            const zLabel = createTextSprite(`卧室数 (${minRooms}-${maxRooms}间)`);
-            zLabel.position.set(0, -10, maxRooms * 20 - 60 + 20);
-            zLabel.name = 'axisLabelZ';
-            scene.add(zLabel);
-        }
+
 
         // 测试回归模型
         function testRegressionModel() {
@@ -1137,11 +1272,27 @@
             });
         }
         
+
+        
         // 初始化
         window.onload = function() {
             init3DScene();
-            // 延迟执行测试
-            setTimeout(testRegressionModel, 1000);
+            // 延迟执行测试和自动计算模型
+            setTimeout(() => {
+                testRegressionModel();
+                // 自动计算模型
+                try {
+                    const coeffs = calculateMultipleRegression();
+                    if (coeffs && coeffs.a1 !== undefined) {
+                        console.log('✅ 页面加载时自动计算模型成功');
+                        modelCalculated = true;
+                        // 显示3D回归平面
+                        showRegressionPlane(coeffs);
+                    }
+                } catch (error) {
+                    console.log('❌ 页面加载时自动计算模型失败:', error);
+                }
+            }, 1000);
         };
     </script>
 </body>
