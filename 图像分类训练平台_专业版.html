@@ -634,32 +634,38 @@
         // 智能模型加载（本地优先，CDN回退）
         async function loadModelWithFallback() {
             const loadingMethods = [
-                // 方法1：本地模型
+                // 方法1：本地模型（优先使用本地模型）
                 async () => {
                     console.log('尝试加载本地MobileNet模型...');
                     try {
-                        return await mobilenet.load({
+                        const model = await mobilenet.load({
                             modelUrl: './models/mobilenet_v2/model.json'
                         });
+                        console.log('✅ 本地模型加载成功！');
+                        return model;
                     } catch (localError) {
-                        console.log('本地模型未找到，尝试CDN...');
+                        console.log('❌ 本地模型加载失败:', localError.message);
+                        console.log('🔄 尝试CDN模型...');
                         throw localError;
                     }
                 },
-                // 方法2：CDN加载
+                // 方法2：CDN加载（备用）
                 async () => {
                     console.log('加载CDN MobileNet模型...');
-                    return await mobilenet.load();
+                    const model = await mobilenet.load();
+                    console.log('✅ CDN模型加载成功！');
+                    return model;
                 }
             ];
 
             // 依次尝试每种加载方式
-            for (const method of loadingMethods) {
+            for (let i = 0; i < loadingMethods.length; i++) {
                 try {
-                    return await method();
+                    return await loadingMethods[i]();
                 } catch (error) {
-                    console.warn('加载方式失败:', error.message);
-                    if (method === loadingMethods[loadingMethods.length - 1]) {
+                    console.warn(`加载方式 ${i + 1} 失败:`, error.message);
+                    if (i === loadingMethods.length - 1) {
+                        console.error('所有加载方式都失败了！');
                         throw error;
                     }
                 }
