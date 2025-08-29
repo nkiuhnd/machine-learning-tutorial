@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>样式测试页面</title>
+    <!-- 引入共享样式 -->
+    <link rel="stylesheet" href="ml-shared.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .test-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .test-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+        }
+        
+        .test-button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-title">
+            <h1>共享样式测试页面</h1>
+            <p>验证ml-shared.css文件是否正常加载</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>按钮样式测试</h2>
+            <button class="test-button">普通按钮</button>
+            <button class="test-button" disabled>禁用按钮</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>信息面板测试</h2>
+            <div class="info-panel">
+                <p>这是一个信息面板样式</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>公式区域测试</h2>
+            <div class="formula">
+                y = ax + b
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>预测结果测试</h2>
+            <div class="prediction-result">
+                预测结果：85分
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>表格测试</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>姓名</th>
+                        <th>成绩</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>小明</td>
+                        <td>85</td>
+                    </tr>
+                    <tr>
+                        <td>小红</td>
+                        <td>92</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

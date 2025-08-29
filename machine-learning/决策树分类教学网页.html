@@ -6,42 +6,12 @@
     <title>初中生决策树分类学习工具</title>
      <script src="js/chart.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- 引入共享样式 -->
+    <link rel="stylesheet" href="ml-shared.css">
+    <!-- 页面特定样式 -->
     <style>
         body {
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            margin: 0;
-            padding: 15px;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            padding: 25px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            background: #f9f9f9;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 500px;
-            margin: 15px 0;
         }
         
         .tree-container {
@@ -52,82 +22,14 @@
             background: #f8f9fa;
         }
         
-        .controls {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin: 20px 0;
-        }
-        
-        .input-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        input, button, select {
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        
         button {
             background: #00f2fe;
             color: #333;
-            cursor: pointer;
-            transition: background 0.3s;
-            font-weight: bold;
         }
         
         button:hover {
             background: #4facfe;
             color: white;
-        }
-        
-        .info-panel {
-            background: #e8f4f8;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-        
-        .formula {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        
-        .prediction-result {
-            background: #d4edda;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: #155724;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        .data-table th, .data-table td {
-            padding: 10px;
-            text-align: center;
-            border: 1px solid #ddd;
-        }
-        
-        .data-table th {
-            background: #00f2fe;
-            color: #333;
         }
         
         .node {

@@ -3,37 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>初中生决策树回归学习工具</title>
+    <title>决策树回归学习工具</title>
+    <!-- 引入D3.js库用于绘制连接线 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- 引入共享样式 -->
+    <link rel="stylesheet" href="ml-shared.css">
+    <!-- 页面特定样式 -->
     <style>
         body {
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
             background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
-            margin: 0;
-            padding: 15px;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            padding: 25px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            background: #f9f9f9;
         }
         
         .tree-container {
@@ -43,35 +21,98 @@
             padding: 20px;
             margin: 15px 0;
             text-align: center;
-            font-family: 'Courier New', monospace;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
             font-size: 14px;
             line-height: 1.8;
+            min-height: 450px;
+            max-height: 600px;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .decision-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            width: 80%;
+        }
+        
+        .tree-level {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+        
+        .tree-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 0 30px;
         }
         
         .tree-node {
-            display: inline-block;
             background: #e3f2fd;
             border: 2px solid #2196f3;
             border-radius: 8px;
-            padding: 10px 15px;
-            margin: 5px;
+            padding: 12px 20px;
+            margin: 10px 0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 2;
+            min-width: 150px;
+            text-align: center;
         }
         
         .tree-leaf {
-            display: inline-block;
             background: #c8e6c9;
             border: 2px solid #4caf50;
             border-radius: 8px;
-            padding: 8px 12px;
-            margin: 5px;
+            padding: 10px 15px;
+            margin: 10px 0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 2;
+            min-width: 120px;
+            text-align: center;
         }
         
-        .decision-arrow {
-            font-size: 20px;
-            color: #ff7e5f;
-            margin: 0 10px;
+        .decision-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        /* 连接线容器 */
+        .connection-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* 连接线样式 */
+        .connector {
+            stroke: #ff7e5f;
+            stroke-width: 3px;
+            fill: none;
+            stroke-linecap: round;
+        }
+        
+        /* 标签容器 */
+        .label-container {
+            position: relative;
+            height: 20px;
+            margin: 5px 0;
         }
         
         .comparison-table {
@@ -114,26 +155,172 @@
             margin: 15px 0;
         }
         
+        /* 特征选择器样式 */
+        .feature-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature-selector h4 {
+            color: #334155;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .feature-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        
+        .feature-group label {
+            min-width: 80px;
+            font-weight: bold;
+            color: #475569;
+        }
+        
+        .feature-group input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .feature-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #ff7e5f;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .feature-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #feb47b;
+            transform: scale(1.1);
+        }
+        
+        .feature-group input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #ff7e5f;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        .feature-group input[type="range"]::-moz-range-thumb:hover {
+            background: #feb47b;
+            transform: scale(1.1);
+        }
+        
+        .feature-group span {
+            min-width: 30px;
+            text-align: center;
+            font-weight: bold;
+            color: #ff7e5f;
+        }
+        
+        .feature-group select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .feature-group select:focus {
+            outline: none;
+            border-color: #ff7e5f;
+            box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.1);
+        }
+        
+        .predict-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 126, 95, 0.3);
+        }
+        
+        .predict-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* 场景选择器样式 */
         .scenario-selector {
             display: flex;
             gap: 10px;
             margin: 15px 0;
             flex-wrap: wrap;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            justify-content: center;
+        }
+        
+        .scenario-selector h4 {
+            width: 100%;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #334155;
         }
         
         .scenario-btn {
             padding: 10px 15px;
-            border: 2px solid #4caf50;
+            border: 2px solid #ff7e5f;
             background: white;
-            color: #4caf50;
+            color: #ff7e5f;
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.3s;
         }
         
-        .scenario-btn:hover, .scenario-btn.active {
-            background: #4caf50;
+        .scenario-btn:hover {
+            background: #ff7e5f;
             color: white;
+        }
+        
+        .scenario-btn.active {
+            background: #ff7e5f;
+            color: white;
+        }
+        
+        /* 空状态样式 */
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #64748b;
+            font-style: italic;
+            text-align: center;
         }
         
         .result-display {
@@ -194,33 +381,75 @@
         <div class="section">
             <h2>🌳 决策树长什么样？</h2>
             <div class="tree-container">
-                <div class="tree-node">
-                    面积 > 120m²？
-                </div>
-                <div class="decision-arrow">↓ 是</div>
-                <div class="tree-node">
-                    是学区房？
-                </div>
-                <div class="decision-arrow">↓ 是</div>
-                <div class="tree-leaf">
-                    预测价格：500万
-                </div>
-                <div class="decision-arrow">↓ 否</div>
-                <div class="tree-leaf">
-                    预测价格：350万
-                </div>
-                <br>
-                <div class="decision-arrow">↓ 否</div>
-                <div class="tree-node">
-                    房龄 < 5年？
-                </div>
-                <div class="decision-arrow">↓ 是</div>
-                <div class="tree-leaf">
-                    预测价格：300万
-                </div>
-                <div class="decision-arrow">↓ 否</div>
-                <div class="tree-leaf">
-                    预测价格：250万
+                <!-- 连接线层 -->
+                <svg class="connection-layer" width="100%" height="100%"></svg>
+                
+                <div class="decision-tree">
+                    <!-- 第一层：根节点 -->
+                    <div class="tree-level">
+                        <div class="tree-branch">
+                            <div class="tree-node" data-id="node1">
+                                面积 > 120m²？
+                            </div>
+                            
+                            <!-- 第二层：两个分支 -->
+                            <div class="tree-level">
+                                <!-- 左侧分支：是 -->
+                                <div class="tree-branch">
+                                    <div class="label-container"><span class="decision-label">是</span></div>
+                                    <div class="tree-node" data-id="node2">
+                                        是学区房？
+                                    </div>
+                                    
+                                    <!-- 第三层：左侧分支的两个子分支 -->
+                                    <div class="tree-level">
+                                        <!-- 是分支 -->
+                                        <div class="tree-branch">
+                                            <div class="label-container"><span class="decision-label">是</span></div>
+                                            <div class="tree-leaf" data-id="leaf1">
+                                                预测价格：500万
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 否分支 -->
+                                        <div class="tree-branch">
+                                            <div class="label-container"><span class="decision-label">否</span></div>
+                                            <div class="tree-leaf" data-id="leaf2">
+                                                预测价格：350万
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 右侧分支：否 -->
+                                <div class="tree-branch">
+                                    <div class="label-container"><span class="decision-label">否</span></div>
+                                    <div class="tree-node" data-id="node3">
+                                        房龄 < 5年？
+                                    </div>
+                                    
+                                    <!-- 第三层：右侧分支的两个子分支 -->
+                                    <div class="tree-level">
+                                        <!-- 是分支 -->
+                                        <div class="tree-branch">
+                                            <div class="label-container"><span class="decision-label">是</span></div>
+                                            <div class="tree-leaf" data-id="leaf3">
+                                                预测价格：300万
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 否分支 -->
+                                        <div class="tree-branch">
+                                            <div class="label-container"><span class="decision-label">否</span></div>
+                                            <div class="tree-leaf" data-id="leaf4">
+                                                预测价格：250万
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <p style="text-align: center; color: #666; font-style: italic;">
@@ -228,21 +457,120 @@
             </p>
         </div>
 
+        <script>
+            // 绘制静态决策树连接线
+            function drawStaticConnections() {
+                // 确保D3已经加载
+                if (!window.d3) return;
+                
+                try {
+                    // 获取SVG容器
+                    const svg = d3.select(".tree-container .connection-layer");
+                    
+                    // 定义连接线数据
+                    const connections = [
+                        {source: "node1", target: "node2"},
+                        {source: "node1", target: "node3"},
+                        {source: "node2", target: "leaf1"},
+                        {source: "node2", target: "leaf2"},
+                        {source: "node3", target: "leaf3"},
+                        {source: "node3", target: "leaf4"}
+                    ];
+                    
+                    // 清除现有连接线
+                    svg.selectAll(".connector").remove();
+                    
+                    // 为每条连接创建路径
+                    connections.forEach((conn, index) => {
+                        const source = document.querySelector(`[data-id="${conn.source}"]`);
+                        const target = document.querySelector(`[data-id="${conn.target}"]`);
+                        
+                        if (source && target) {
+                            const sourceRect = source.getBoundingClientRect();
+                            const targetRect = target.getBoundingClientRect();
+                            const svgRect = svg.node().getBoundingClientRect();
+                            
+                            // 计算相对位置
+                            const sourceX = sourceRect.left + sourceRect.width / 2 - svgRect.left;
+                            const sourceY = sourceRect.bottom - svgRect.top;
+                            const targetX = targetRect.left + targetRect.width / 2 - svgRect.left;
+                            const targetY = targetRect.top - svgRect.top;
+                            
+                            // 创建平滑的贝塞尔曲线
+                            const controlPoint1X = sourceX;
+                            const controlPoint1Y = sourceY + 20;
+                            const controlPoint2X = targetX;
+                            const controlPoint2Y = targetY - 20;
+                            
+                            // 创建路径元素
+                            svg.append("path")
+                                .attr("class", "connector")
+                                .attr("d", `M ${sourceX},${sourceY} C ${controlPoint1X},${controlPoint1Y} ${controlPoint2X},${controlPoint2Y} ${targetX},${targetY}`)
+                                .style("opacity", 0)
+                                .transition()
+                                .duration(800)
+                                .delay(index * 200)
+                                .style("opacity", 1);
+                        }
+                    });
+                } catch (error) {
+                    console.error("绘制连接线时出错:", error);
+                }
+            }
+            
+            // 页面加载完成后绘制连接线
+            window.addEventListener("load", drawStaticConnections);
+            // 窗口大小改变时重新绘制连接线
+            window.addEventListener("resize", drawStaticConnections);
+        </script>
+
         <div class="section">
             <h2>📊 真实案例：房价预测决策树</h2>
             <div class="interactive-demo">
                 <h3>🏠 选择房子特征，看决策树如何预测价格</h3>
-                <div class="scenario-selector">
-                    <button class="scenario-btn active" onclick="selectScenario('学区房大户型', event)">学区房+大户型</button>
-                    <button class="scenario-btn" onclick="selectScenario('新小区小户型', event)">新小区+小户型</button>
-                    <button class="scenario-btn" onclick="selectScenario('老小区中户型', event)">老小区+中户型</button>
-                    <button class="scenario-btn" onclick="selectScenario('郊区大户型', event)">郊区+大户型</button>
+                
+                <!-- 新增：交互式特征选择器 -->
+                <div class="feature-selector">
+                    <h4>🏡 自定义房子特征</h4>
+                    <div class="feature-group">
+                        <label>面积 (m²):</label>
+                        <input type="range" id="areaSlider" min="60" max="200" value="120"
+                               oninput="document.getElementById('areaValue').textContent = this.value">
+                        <span id="areaValue">120</span>
+                    </div>
+                    <div class="feature-group">
+                        <label>是学区房?</label>
+                        <select id="isSchoolDistrict">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+                    <div class="feature-group">
+                        <label>房龄 (年):</label>
+                        <input type="range" id="ageSlider" min="1" max="20" value="5"
+                               oninput="document.getElementById('ageValue').textContent = this.value">
+                        <span id="ageValue">5</span>
+                    </div>
+                    <button class="predict-btn" onclick="predictPrice()">预测价格</button>
                 </div>
+                
+                <!-- 原有场景选择器（作为快速选择） -->
+                <div class="scenario-selector">
+                    <h4>🚀 快速选择场景</h4>
+                    <button class="scenario-btn" onclick="setScenario('学区房大户型')">学区房+大户型</button>
+                    <button class="scenario-btn" onclick="setScenario('新小区小户型')">新小区+小户型</button>
+                    <button class="scenario-btn" onclick="setScenario('老小区中户型')">老小区+中户型</button>
+                    <button class="scenario-btn" onclick="setScenario('郊区大户型')">郊区+大户型</button>
+                </div>
+                
                 <div id="scenarioTree" class="tree-container">
                     <!-- 动态生成的决策树路径 -->
+                    <div class="empty-state">
+                        <p>🎯 调整上方房子特征，然后点击「预测价格」按钮查看决策树预测过程</p>
+                    </div>
                 </div>
                 <div class="result-display" id="predictionResult">
-                    选择上方场景查看决策过程
+                    <p>等待预测...</p>
                 </div>
             </div>
         </div>
@@ -337,13 +665,15 @@
     </div>
 
     <script>
+        // 场景定义
         const scenarios = {
             '学区房大户型': {
                 path: [
                     {question: '面积 > 120m²？', answer: '是'},
                     {question: '是学区房？', answer: '是'},
                     {result: '预测价格：500万', reason: '满足"大户型+学区房"的黄金组合'}
-                ]
+                ],
+                features: {area: 150, isSchoolDistrict: true, age: 8}
             },
             '新小区小户型': {
                 path: [
@@ -351,7 +681,8 @@
                     {question: '房龄 < 5年？', answer: '是'},
                     {question: '面积 > 90m²？', answer: '否'},
                     {result: '预测价格：280万', reason: '新小区小户型，适合刚需'}
-                ]
+                ],
+                features: {area: 80, isSchoolDistrict: false, age: 3}
             },
             '老小区中户型': {
                 path: [
@@ -359,7 +690,8 @@
                     {question: '房龄 < 5年？', answer: '否'},
                     {question: '面积 > 90m²？', answer: '是'},
                     {result: '预测价格：220万', reason: '老小区中户型，性价比较高'}
-                ]
+                ],
+                features: {area: 100, isSchoolDistrict: false, age: 12}
             },
             '郊区大户型': {
                 path: [
@@ -367,56 +699,281 @@
                     {question: '是学区房？', answer: '否'},
                     {question: '房龄 < 5年？', answer: '是'},
                     {result: '预测价格：380万', reason: '大户型但非学区，郊区价格优势'}
-                ]
+                ],
+                features: {area: 140, isSchoolDistrict: false, age: 4}
             }
         };
 
-        function selectScenario(scenarioName, event) {
-            // 更新按钮状态
-            document.querySelectorAll('.scenario-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            if (event && event.target) {
-                event.target.classList.add('active');
-            } else {
-                // 如果是页面加载时调用，激活默认按钮
-                document.querySelector('.scenario-btn').classList.add('active');
-            }
-
-            // 获取场景数据
+        // 根据场景设置特征选择器的值
+        function setScenario(scenarioName) {
             const scenario = scenarios[scenarioName];
+            if (scenario && scenario.features) {
+                document.getElementById('areaSlider').value = scenario.features.area;
+                document.getElementById('areaValue').textContent = scenario.features.area;
+                document.getElementById('isSchoolDistrict').value = scenario.features.isSchoolDistrict;
+                document.getElementById('ageSlider').value = scenario.features.age;
+                document.getElementById('ageValue').textContent = scenario.features.age;
+                
+                // 自动预测
+                predictPrice();
+            }
+        }
+
+        // 基于特征预测价格
+        function predictPrice() {
+            // 获取用户选择的特征
+            const area = parseInt(document.getElementById('areaSlider').value);
+            const isSchoolDistrict = document.getElementById('isSchoolDistrict').value === 'true';
+            const age = parseInt(document.getElementById('ageSlider').value);
             
-            // 生成决策树路径
-            let treeHTML = '';
-            scenario.path.forEach((step, index) => {
+            // 构建决策路径
+            const path = [];
+            
+            // 应用决策树逻辑 - 动态显示用户选择的面积值
+            if (area > 120) {
+                path.push({question: `${area}m² > 120m²？`, answer: '是'});
+                
+                if (isSchoolDistrict) {
+                    path.push({question: '是学区房？', answer: '是'});
+                    path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '满足"大户型+学区房"的黄金组合'});
+                } else {
+                    path.push({question: '是学区房？', answer: '否'});
+                    
+                    if (age < 5) {
+                        path.push({question: `${age}年 < 5年？`, answer: '是'});
+                        path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '大户型但非学区，新小区价格优势'});
+                    } else {
+                        path.push({question: `${age}年 < 5年？`, answer: '否'});
+                        path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '大户型但非学区，老小区价格适中'});
+                    }
+                }
+            } else {
+                path.push({question: `${area}m² > 120m²？`, answer: '否'});
+                
+                if (age < 5) {
+                    path.push({question: `${age}年 < 5年？`, answer: '是'});
+                    
+                    if (area > 90) {
+                        path.push({question: `${area}m² > 90m²？`, answer: '是'});
+                        path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '新小区中户型，市场需求旺盛'});
+                    } else {
+                        path.push({question: `${area}m² > 90m²？`, answer: '否'});
+                        path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '新小区小户型，适合刚需'});
+                    }
+                } else {
+                    path.push({question: `${age}年 < 5年？`, answer: '否'});
+                    
+                    if (area > 90) {
+                        path.push({question: `${area}m² > 90m²？`, answer: '是'});
+                        path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '老小区中户型，性价比较高'});
+                    } else {
+                        path.push({question: `${area}m² > 90m²？`, answer: '否'});
+                        path.push({result: `预测价格：${calculatePrice(area, isSchoolDistrict, age)}万`, reason: '老小区小户型，总价较低'});
+                    }
+                }
+            }
+            
+            // 使用与selectScenario相同的逻辑生成树结构
+            generateDecisionTree(path);
+        }
+        
+        // 计算预测价格的函数
+        function calculatePrice(area, isSchoolDistrict, age) {
+            // 基础价格
+            let basePrice = area * 2; // 假设每平米2万
+            
+            // 学区房溢价
+            if (isSchoolDistrict) {
+                basePrice *= 1.5; // 学区房溢价50%
+            }
+            
+            // 房龄折扣
+            if (age >= 5) {
+                basePrice *= (1 - (age - 4) * 0.02); // 每增加1年，价格降低2%
+                // 最低不低于基础价格的70%
+                basePrice = Math.max(basePrice, area * 2 * 0.7);
+            }
+            
+            // 面积效应调整
+            if (area > 150) {
+                basePrice *= 0.95; // 超大户型单价略低
+            }
+            
+            // 四舍五入到整数
+            return Math.round(basePrice);
+        }
+
+        // 生成决策树结构并显示
+        function generateDecisionTree(path) {
+            // 生成树状流程图结构
+            let treeHTML = '<div class="decision-tree">';
+            let currentLevel = '<div class="tree-level">';
+            let currentBranch = '<div class="tree-branch">';
+            
+            // 存储节点连接关系
+            const connections = [];
+            let prevId = null;
+            
+            path.forEach((step, index) => {
+                const currentId = step.question ? `node-${index}` : `leaf-${index}`;
+                
                 if (step.question) {
-                    treeHTML += `
-                        <div class="tree-node">
+                    // 添加节点
+                    currentBranch += `
+                        <div class="tree-node" data-id="${currentId}">
                             ${step.question}
                         </div>
-                        <div class="decision-arrow">↓ ${step.answer}</div>
+                        <div class="label-container"><span class="decision-label">${step.answer}</span></div>
                     `;
                 } else {
-                    treeHTML += `
-                        <div class="tree-leaf">
+                    // 添加叶子节点（结果）
+                    currentBranch += `
+                        <div class="tree-leaf" data-id="${currentId}">
                             ${step.result}
                         </div>
                     `;
                 }
+                
+                // 记录连接关系
+                if (prevId && step.question) {
+                    connections.push({source: prevId, target: currentId});
+                }
+                
+                prevId = currentId;
+                
+                // 如果不是最后一步，添加下一级结构
+                if (index < path.length - 1 && path[index + 1].question) {
+                    currentBranch += '<div class="tree-level">';
+                    currentBranch += '<div class="tree-branch">';
+                }
             });
+            
+            // 关闭所有打开的标签
+            const openTagsCount = path.filter(step => step.question).length;
+            for (let i = 0; i < openTagsCount; i++) {
+                currentBranch += '</div>'; // 关闭 tree-branch
+                currentBranch += '</div>'; // 关闭 tree-level
+            }
+            
+            currentLevel += currentBranch;
+            currentLevel += '</div>';
+            treeHTML += currentLevel;
+            treeHTML += '</div>';
 
             // 更新显示
-            document.getElementById('scenarioTree').innerHTML = treeHTML;
+            const scenarioTree = document.getElementById('scenarioTree');
             
-            const lastStep = scenario.path[scenario.path.length - 1];
+            // 先清空容器
+            scenarioTree.innerHTML = '';
+            
+            // 手动创建并添加DOM元素，而不是使用innerHTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = treeHTML;
+            
+            // 使用文档片段提高性能
+            const fragment = document.createDocumentFragment();
+            while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
+            }
+            
+            // 先添加SVG连接层
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "connection-layer");
+            svg.style.position = "absolute";
+            svg.style.top = "0";
+            svg.style.left = "0";
+            svg.style.width = "100%";
+            svg.style.height = "100%";
+            svg.style.pointerEvents = "none";
+            svg.style.zIndex = "1";
+            scenarioTree.appendChild(svg);
+            
+            // 然后添加决策树内容
+            scenarioTree.appendChild(fragment);
+            
+            const lastStep = path[path.length - 1];
             document.getElementById('predictionResult').innerHTML = 
                 `<strong>${lastStep.result}</strong><br><br>
                 <em>${lastStep.reason}</em>`;
+            
+            // 使用setTimeout确保DOM完全渲染后再绘制连接线
+            setTimeout(() => {
+                drawScenarioConnections(scenarioTree, connections);
+            }, 10);
+        }
+        
+        // 绘制场景决策树的连接线
+        function drawScenarioConnections(container, connections) {
+            // 确保D3已经加载
+            if (!window.d3) return;
+            
+            try {
+                // 查找或创建SVG容器
+                let svg = d3.select(container).select(".connection-layer");
+                if (svg.empty()) {
+                    // 创建SVG容器
+                    svg = d3.select(container)
+                        .insert("svg", ":first-child")
+                        .attr("class", "connection-layer")
+                        .style("position", "absolute")
+                        .style("top", "0")
+                        .style("left", "0")
+                        .style("width", "100%")
+                        .style("height", "100%")
+                        .style("pointer-events", "none")
+                        .style("z-index", "1");
+                }
+                
+                // 清除现有连接线
+                svg.selectAll(".connector").remove();
+                
+                // 为每条连接创建路径
+                connections.forEach((conn, index) => {
+                    const source = container.querySelector(`[data-id="${conn.source}"]`);
+                    const target = container.querySelector(`[data-id="${conn.target}"]`);
+                    
+                    if (source && target) {
+                        const sourceRect = source.getBoundingClientRect();
+                        const targetRect = target.getBoundingClientRect();
+                        const svgRect = svg.node().getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        
+                        // 计算相对位置
+                        const sourceX = sourceRect.left + sourceRect.width / 2 - containerRect.left;
+                        const sourceY = sourceRect.bottom - containerRect.top;
+                        const targetX = targetRect.left + targetRect.width / 2 - containerRect.left;
+                        const targetY = targetRect.top - containerRect.top;
+                        
+                        // 设置SVG尺寸
+                        svg.attr("width", container.clientWidth)
+                           .attr("height", container.clientHeight);
+                        
+                        // 创建平滑的贝塞尔曲线
+                        const controlPoint1X = sourceX;
+                        const controlPoint1Y = sourceY + 20;
+                        const controlPoint2X = targetX;
+                        const controlPoint2Y = targetY - 20;
+                        
+                        // 创建路径元素
+                        svg.append("path")
+                            .attr("class", "connector")
+                            .attr("d", `M ${sourceX},${sourceY} C ${controlPoint1X},${controlPoint1Y} ${controlPoint2X},${controlPoint2Y} ${targetX},${targetY}`)
+                            .style("opacity", 0)
+                            .transition()
+                            .duration(800)
+                            .delay(index * 200)
+                            .style("opacity", 1);
+                    }
+                });
+            } catch (error) {
+                console.error("绘制连接线时出错:", error);
+            }
         }
 
-        // 页面加载时显示默认场景
+        // 页面加载时初始化
         window.onload = function() {
-            selectScenario('学区房大户型');
+            // 清除默认场景的自动加载
+            // 让用户自己选择特征或场景
         };
     </script>
 </body>
