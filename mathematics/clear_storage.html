@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清除本地存储</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>清除数学学习平台用户状态</h2>
+        <p>点击下方按钮清除本地存储中的用户状态，这样下次打开数学学习平台时将显示欢迎页面。</p>
+        <button onclick="clearStorage()">清除用户状态</button>
+        <p id="status" style="margin-top: 20px; color: #6c757d;"></p>
+    </div>
+    <script>
+        function clearStorage() {
+            localStorage.removeItem('math-learning-platform-state');
+            document.getElementById('status').textContent = '用户状态已清除！现在可以关闭此页面。';
+            document.getElementById('status').style.color = 'green';
+        }
+    </script>
+</body>
+</html>
