@@ -313,12 +313,9 @@
             padding: 15px;
             margin-bottom: 10px;
             text-align: center;
-            cursor: pointer;
+            cursor: move;
             transition: all 0.3s ease;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            max-width: 200px;
-            margin-left: auto;
-            margin-right: auto;
         }
         
         .match-item:hover {
@@ -582,7 +579,7 @@
                 </div>
                 <div class="feedback" id="matching-feedback"></div>
                 <button class="control-btn" onclick="startMatchingGame()">开始游戏</button>
-                <!--<button class="control-btn" onclick="checkAllConnections()">检查答案</button>  !-->
+                <button class="control-btn" onclick="checkAllConnections()">检查答案</button>
             </div>
         </section>
         
@@ -815,6 +812,9 @@
         }
         
         // 连线配对游戏变量
+        let isDrawing = false;
+        let startX, startY, endX, endY;
+        let currentConnection = null;
         let connections = [];
         let matchingCanvas, matchingCtx;
         
@@ -838,10 +838,16 @@
             // 清空之前的内容
             const numbersContainer = document.getElementById('numbers-container');
             const quantitiesContainer = document.getElementById('quantities-container');
-            
-            // 清空容器，准备重新创建元素（无论之前是否有元素）
             numbersContainer.innerHTML = '';
             quantitiesContainer.innerHTML = '';
+            
+            // 清除之前的连线
+            connections = [];
+            matchingCtx.clearRect(0, 0, matchingCanvas.width, matchingCanvas.height);
+            
+            // 获取反馈元素
+            const feedback = document.getElementById('matching-feedback');
+            feedback.className = 'feedback';
             
             // 创建数字和数量数组
             const numbers = [1, 2, 3, 4, 5];
@@ -857,9 +863,6 @@
             shuffleArray(numbers);
             shuffleArray(quantities);
             
-            // 存储当前选中的数字元素
-            let selectedNumberElement = null;
-            
             // 创建数字元素
             numbers.forEach(num => {
                 const numberElement = document.createElement('div');
@@ -869,16 +872,8 @@
                 numberElement.style.cursor = 'pointer';
                 
                 // 添加点击事件
-                numberElement.addEventListener('click', function() {
-                    // 移除之前选中元素的高亮
-                    if (selectedNumberElement) {
-                        selectedNumberElement.style.backgroundColor = 'white';
-                    }
-                    
-                    // 选中当前元素
-                    selectedNumberElement = this;
-                    this.style.backgroundColor = '#f0f7ff';
-                    this.style.borderColor = '#667eea';
+                numberElement.addEventListener('mousedown', function(e) {
+                    startDrawing(e, this);
                 });
                 
                 numbersContainer.appendChild(numberElement);
@@ -893,77 +888,22 @@
                 quantityElement.style.cursor = 'pointer';
                 
                 // 添加点击事件
-                quantityElement.addEventListener('click', function() {
-                    if (selectedNumberElement) {
-                        // 获取数字和目标值
-                        const number = parseInt(selectedNumberElement.dataset.number);
-                        const target = parseInt(this.dataset.target);
-                        
-                        // 获取元素位置信息用于绘制连线
-                        const numberRect = selectedNumberElement.getBoundingClientRect();
-                        const quantityRect = this.getBoundingClientRect();
-                        const canvasRect = matchingCanvas.getBoundingClientRect();
-                        
-                        // 计算画布上的坐标
-                        const startX = numberRect.right - canvasRect.left;
-                        const startY = numberRect.top + numberRect.height / 2 - canvasRect.top;
-                        const endX = quantityRect.left - canvasRect.left;
-                        const endY = quantityRect.top + quantityRect.height / 2 - canvasRect.top;
-                        
-                        // 绘制连线
-                        drawConnectionBetweenPoints(startX, startY, endX, endY, number, target);
-                        
-                        // 清除选中状态
-                        selectedNumberElement.style.backgroundColor = 'white';
-                        selectedNumberElement = null;
-                    }
+                quantityElement.addEventListener('mouseup', function(e) {
+                    stopDrawing(e, this);
                 });
                 
                 quantitiesContainer.appendChild(quantityElement);
             });
             
-            // 清除之前的连线
-            connections = [];
-            matchingCtx.clearRect(0, 0, matchingCanvas.width, matchingCanvas.height);
-            
-            // 获取反馈元素
-            const feedback = document.getElementById('matching-feedback');
-            feedback.className = 'feedback';
-            feedback.textContent = '';
-            
-            
-            // 添加绘制连线的函数
-            function drawConnectionBetweenPoints(startX, startY, endX, endY, number, target) {
-                // 转换为字符串便于比较
-                const numberStr = number.toString();
-                const targetStr = target.toString();
-                
-                // 检查是否已经存在与相同数字相关的连线，如果有则移除
-                const existingIndex = connections.findIndex(conn => conn.number === numberStr);
-                if (existingIndex !== -1) {
-                    connections.splice(existingIndex, 1);
+            // 添加鼠标移动事件用于绘制连线
+            document.addEventListener('mousemove', drawConnection);
+            document.addEventListener('mouseup', function() {
+                if (isDrawing) {
+                    isDrawing = false;
+                    currentConnection = null;
+                    redrawAllConnections();
                 }
-                
-                // 保存新连线
-                const connection = {
-                    startX: startX,
-                    startY: startY,
-                    endX: endX,
-                    endY: endY,
-                    number: numberStr,
-                    target: targetStr,
-                    correct: number === target
-                };
-                connections.push(connection);
-                
-                // 清除反馈信息（不显示文字反馈）
-                const feedback = document.getElementById('matching-feedback');
-                feedback.className = 'feedback';
-                feedback.textContent = '';
-                
-                // 重绘所有连线（通过线条颜色区分配对结果）
-                redrawAllConnections();
-            }
+            });
         }
         
         // 打乱数组顺序
@@ -974,6 +914,72 @@
             }
         }
         
+        // 开始绘制连线
+        function startDrawing(e, element) {
+            isDrawing = true;
+            const rect = element.getBoundingClientRect();
+            const matchingAreaRect = document.querySelector('.matching-area').getBoundingClientRect();
+            
+            startX = rect.left + rect.width / 2 - matchingAreaRect.left;
+            startY = rect.top + rect.height / 2 - matchingAreaRect.top;
+            
+            currentConnection = {
+                startX: startX,
+                startY: startY,
+                number: element.dataset.number
+            };
+        }
+        
+        // 绘制连线
+        function drawConnection(e) {
+            if (!isDrawing) return;
+            
+            const matchingAreaRect = document.querySelector('.matching-area').getBoundingClientRect();
+            endX = e.clientX - matchingAreaRect.left;
+            endY = e.clientY - matchingAreaRect.top;
+            
+            // 清除画布并重新绘制所有连线
+            redrawAllConnections();
+            
+            // 绘制当前连线
+            matchingCtx.beginPath();
+            matchingCtx.moveTo(startX, startY);
+            matchingCtx.lineTo(endX, endY);
+            matchingCtx.strokeStyle = '#2196F3';
+            matchingCtx.lineWidth = 3;
+            matchingCtx.stroke();
+        }
+        
+        // 停止绘制连线
+        function stopDrawing(e, element) {
+            if (!isDrawing || !currentConnection) return;
+            
+            isDrawing = false;
+            const rect = element.getBoundingClientRect();
+            const matchingAreaRect = document.querySelector('.matching-area').getBoundingClientRect();
+            
+            endX = rect.left + rect.width / 2 - matchingAreaRect.left;
+            endY = rect.top + rect.height / 2 - matchingAreaRect.top;
+            
+            // 保存连线
+            connections.push({
+                startX: currentConnection.startX,
+                startY: currentConnection.startY,
+                endX: endX,
+                endY: endY,
+                number: currentConnection.number,
+                target: element.dataset.target
+            });
+            
+            currentConnection = null;
+            
+            // 检查当前连线是否正确
+            checkConnection(connections[connections.length - 1]);
+            
+            // 重绘所有连线
+            redrawAllConnections();
+        }
+        
         // 重绘所有连线
         function redrawAllConnections() {
             matchingCtx.clearRect(0, 0, matchingCanvas.width, matchingCanvas.height);
@@ -982,13 +988,31 @@
                 matchingCtx.beginPath();
                 matchingCtx.moveTo(conn.startX, conn.startY);
                 matchingCtx.lineTo(conn.endX, conn.endY);
-                matchingCtx.strokeStyle = conn.correct ? '#4CAF50' : '#F44336'; // 正确为绿色，错误为红色
+                matchingCtx.strokeStyle = conn.correct ? '#4CAF50' : '#2196F3';
                 matchingCtx.lineWidth = 3;
                 matchingCtx.stroke();
             });
         }
         
-
+        // 检查单个连线是否正确
+        function checkConnection(connection) {
+            const feedback = document.getElementById('matching-feedback');
+            
+            if (connection.number === connection.target) {
+                connection.correct = true;
+                feedback.className = 'feedback correct';
+                feedback.textContent = '配对正确！';
+            } else {
+                connection.correct = false;
+                feedback.className = 'feedback incorrect';
+                feedback.textContent = '配对错误，请重试！';
+            }
+            
+            // 2秒后清除反馈
+            setTimeout(() => {
+                feedback.className = 'feedback';
+            }, 2000);
+        }
         
         // 检查所有连线
         function checkAllConnections() {
